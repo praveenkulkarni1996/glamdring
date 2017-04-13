@@ -1,3 +1,4 @@
+#pragma once
 #include <iostream>
 #include <vector>
 
@@ -5,15 +6,20 @@
 #define MEMORY 2048
 
 
-#define CARRY_FLAG 1
-#define ZERO_FLAG 1
-// TODO: define appropriate
-
+#define C_FLAG 0
+#define Z_FLAG 1
+#define N_FLAG 2
+#define V_FLAG 3
+#define S_FLAG 4
+#define H_FLAG 5
+#define T_FLAG 6
+#define I_FLAG 7
 
 struct state_t {
-    int16_t reg[REGISTERS];
+    int8_t reg[REGISTERS];
     bool flags[8];
-    // todo add pointers
+    int8_t mem[MEMORY];
+    // todo add memory
 };
 
 struct instr_t {
@@ -21,5 +27,39 @@ struct instr_t {
     int8_t cost;
     int8_t reg_d, reg_r;
     int mode;
-    int imm, K;
+    int imm, K, k;
 };
+
+
+// table 4-2 arithmetic and logic instructions
+#define ADD 1
+#define ADC 2
+#define ADIW 3 // not implemented
+#define SUB 4
+#define SUBI 5
+#define SBC 6
+#define SBCI 7
+#define SBIW 100 // not implemented
+#define AND 8
+#define ANDI 9
+#define OR 10
+#define ORI 11
+#define EOR 12
+#define COM 13
+#define NEG 14
+#define SBR 15
+#define CBR 16
+#define INC 17
+#define DEC 18
+#define TST 19
+#define CLR 20
+#define SER 21
+#define MUL 22  // --- not yet implemented
+#define MULS 23
+#define MULSU 24
+#define FMUL 25
+#define FMULS 26
+#define FMULSU 27
+#define DES 28
+
+// table 4-3
