@@ -1,0 +1,8 @@
+Makefile        
+
+testcase_gen.cpp -- used to generate testcases.
+exp_testcase.txt -- exp(x) for x in [-1, 1]
+tri_testcase.txt -- x * 3 for x in [-1, 1]
+add_testcase.txt -- x + x for x in [-1, 1]   
+ml7_testcase.txt -- x * 7 for x in ???
+

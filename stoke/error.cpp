@@ -184,11 +184,12 @@ void test_subtraction() {
 
 }
 
-int main() {
+int main(int argc, char* argv[]) {
     srand(time(NULL));
     vector<testpoint> testcase;
     vector<instr_t> program(10);
-    read_testcase("../testcase/ml7_testcase.txt", testcase);
+    read_testcase(argv[1], testcase);
+    cout << argv[1] << "\n";
 
     int opcodes [] = {ADD, SUB, MOV};
     int num_opcodes = sizeof(opcodes) / sizeof(int);
