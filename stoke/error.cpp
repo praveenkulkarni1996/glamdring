@@ -6,9 +6,10 @@
 #include "../run_program.h"
 
 typedef pair<int8_t, int8_t> testpoint;
-double beta = 4.0;
+double beta = 2.0;
 
 const int REGISTER_LIMIT = 2;
+const int NUM_RESTARTS = 10;
 
 int8_t popcount(uint8_t num) {
     int8_t ans = 0;
@@ -111,36 +112,36 @@ void mcmc_search(const vector<testpoint> &testcase,
     int prevcost = total_reg_error(testcase, program);
     for(int i = 0; i < 10000; ++i) {
         int prog_index = rand() % program.size();
-        printf("pi = %d:\t", prog_index);
+        // printf("pi = %d:\t", prog_index);
         instr_t previnstr = program[prog_index];
 
         int decider = rand () % 100;
         if(decider < 90) {
-            printf("op:");
+            // printf("op:");
             change_opcode(program[prog_index]);
         }
         else if(decider < 95) {
-            printf("dr:");
+            // printf("dr:");
             change_dest_register(program[prog_index]);
         }
         else {
-            printf("sr:");
+            // printf("sr:");
             change_src_register(program[prog_index]);
         }
 
         int newcost = total_reg_error(testcase, program);
 
-        printf("\t%d ---> %d\n", prevcost, newcost);
+        // printf("\t%d ---> %d\n", prevcost, newcost);
         float accept = min(1.0, exp(-beta * newcost / prevcost));
-        printf("acc = %lf\t", accept);
+        // printf("acc = %lf\t", accept);
 
         if(rand() % 100000 < accept * 100000) {
             prevcost = newcost;
-            printf("ACCEPTED\n");
+            //printf("ACCEPTED\n");
         }
         else {
             program[prog_index] = previnstr;
-            printf("REJECTED\n");
+            // printf("REJECTED\n");
         }
     }
 }
@@ -184,36 +185,24 @@ void test_subtraction() {
 }
 
 int main() {
-    // test_subtraction(); return 0;
     srand(time(NULL));
     vector<testpoint> testcase;
-    vector<instr_t> program(3);
+    vector<instr_t> program(10);
+    read_testcase("../testcase/ml7_testcase.txt", testcase);
 
-    /*
-    program[0].opcode = MOV;
-    program[0].reg_d = 1;
-    program[0].reg_r = 0;
-
-    program[1].opcode = ADD;
-    program[1].reg_r = 1;
-    program[1].reg_d = 0;
-
-    program[2].opcode = ADD;
-    program[2].reg_r = 1;
-    program[2].reg_d = 0;
-    */
-
-    for(auto &instr: program) {
-        instr.opcode = MOV;
-        instr.reg_d = instr.reg_r = 0;
-    }
-
-    read_testcase("../testcase/tri_testcase.txt", testcase);
-    cout << "first = " << total_reg_error(testcase, program) << "\n";
-
-    mcmc_search(testcase, program);
-    cout << "final = " << total_reg_error(testcase, program) << "\n";
-    for(auto &instr: program) {
-        print_instr(instr);
+    int opcodes [] = {ADD, SUB, MOV};
+    int num_opcodes = sizeof(opcodes) / sizeof(int);
+    for(int restarts = 0; restarts < NUM_RESTARTS; ++restarts) {
+        for(auto &instr: program) {
+            instr.opcode = opcodes[rand() % num_opcodes];
+            instr.reg_d = rand() % REGISTER_LIMIT;
+            instr.reg_r = rand() % REGISTER_LIMIT;
+        }
+        cout << "first = " << total_reg_error(testcase, program) << "\n";
+        mcmc_search(testcase, program);
+        cout << "final = " << total_reg_error(testcase, program) << "\n";
+        for(auto &instr: program) {
+            print_instr(instr);
+        }
     }
 }

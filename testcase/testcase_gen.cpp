@@ -35,12 +35,12 @@ int main() {
     */
     for(int i = 0; i <= 255; ++i) {
         float flx = mapping[i];
-        float fly = flx * 3; //exp(flx);
+        float fly = flx * 7; //exp(flx);
         int fx = i - 128; 
         int fy = float_to_fixed(fly) - 128;
         assert(-128 <= fx and fx <= 127);
         assert(-128 <= fy and fy <= 127);
-        if(-1 <= flx and flx <= 1)
+        if(-1 <= flx and flx <= 1 and -100 < fy and fy < 100)
             cout << fx << " " << fy << "\n";
     }
 }
