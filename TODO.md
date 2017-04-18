@@ -4,10 +4,10 @@
 1. Lookup the calling convention/API for input/output.
    * Might have to mark callee saved registers as live.
 2. Complete STOKE for the remaining instructions.
-   * single-register instructions.
+   * ~~~~~ single-register instructions. ~~~~~
    * constants in instructions (+ random constants)
    * ADDW, SUBW, MUL instructions.
-   * UNUSED/NOP instructions.
+   * ~~~~~ UNUSED/NOP instructions. ~~~~~
    * ~~~~ proper function for randomization. ~~~
    * shift bits.
 3. Run the real benchmarks on the testcases.

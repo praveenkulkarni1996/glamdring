@@ -27,7 +27,7 @@ struct instr_t {
     int8_t cost;
     int8_t reg_d, reg_r;
     int mode;
-    int imm, K, k;
+    int K, k;
 };
 
 

@@ -4,44 +4,30 @@
 #include <ctime>
 #include <cmath>
 #include "../run_program.h"
+#include "helper.h"
+
+#define SYNTHESIS false
+#define OPTIMIZATION true
 
 typedef pair<int8_t, int8_t> testpoint;
 typedef vector<testpoint> testcase_t;
-double beta = 2.0;
+double beta = 1.0;
 
 const int REGISTER_LIMIT = 2;
 const int NUM_RESTARTS = 10;
+const int PROGRAM_LEN = 10;
+bool MODE = SYNTHESIS;
 
-int8_t popcount(uint8_t num) {
-    int8_t ans = 0;
-    int8_t penalty = 1;
-    while(num != 0) {
-        ans += (penalty) * (num & 1);
-        num >>= 1;
-        penalty++;
+inline int popcount(uint8_t num) {
+    // not just popcount, penalized popcount
+    const int scale = 1; 
+    int ans = 0;
+    for(int i=0, penalty = scale; i < 8; i++, penalty += scale) {
+        ans += (penalty) * ((num >> i) & 1);
     }
     return ans;
 }
 
-void print_instr(const instr_t &instr) {
-    switch(instr.opcode) {
-        case ADD:
-            printf("ADD %d %d\n", instr.reg_r, instr.reg_d);
-            break;
-        case SUB:
-            printf("SUB %d %d\n", instr.reg_r, instr.reg_d);
-            break;
-        case MOV:
-            printf("MOV %d %d\n", instr.reg_r, instr.reg_d);
-            break;
-        case UNUSED:
-            printf("UNUSED\n");
-            break;
-        default:
-            printf("WTF!!! %d\n", instr.opcode);
-            exit(0);
-    }
-}
 
 void read_testcase(const char filename[], vector<testpoint> &testcase) {
     ifstream fin(filename);
@@ -70,6 +56,11 @@ int total_reg_error(const vector<testpoint> &testcase,
         run_program(state, program);
         error += popcount((uint8_t)(state.reg[0] ^ tp.second));
     }
+    if(MODE == OPTIMIZATION) {
+        for(auto &instr: program) {
+            error += get_cost(instr);
+        }
+    }
     return error;
 }
 
@@ -93,12 +84,20 @@ mcmc_opcode(vector<instr_t> &program, const int oldcost,
         case SBC: case AND: case OR: case EOR:
             {
                 const int opcodes[] = 
-                    { MOV, ADD, SUB, /*ADC, SBC, AND, OR, EOR */};
+                    { MOV, ADD, SUB, ADC, SBC, AND, OR, EOR};
                 const int num_opcodes = sizeof(opcodes) / sizeof(int);
                 program[index].opcode = opcodes[rand() % num_opcodes];
                 break;
             }
-        // TODO: add other instructoins 
+        case INC: case DEC: case COM: case NEG:
+        case TST: case CLR: case SER:
+            {
+                const int opcodes[] = 
+                {INC, DEC, COM, /*NEG,*/ TST, CLR, SER};
+                const int num_opcodes = sizeof(opcodes) / sizeof(int);
+                program[index].opcode = opcodes[rand() % num_opcodes];
+                break;
+            }
         default:
             assert(false);
     }
@@ -129,7 +128,10 @@ mcmc_operand(vector<instr_t> &program, const int oldcost,
             else
                 program[index].reg_d = rand() % REGISTER_LIMIT;
             break;
-        /* * TODO: add other instructions */
+        case INC: case DEC: case COM: case NEG:
+        case TST: case CLR: case SER:
+            program[index].reg_d = rand() % REGISTER_LIMIT;
+            break;
         default:
             assert(false);
     }
@@ -166,11 +168,13 @@ mcmc_instr(vector<instr_t> &program, const int oldcost,
         program[index].opcode = UNUSED;
     }
     else {
-        int opcodes[] = {MOV, ADD, SUB, /*ADC, SBC, AND, OR, EOR,
-            COM, NEG, INC, DEC, TST, CLR, SER,  
-            ANDI, ORI, CBR */};
+        int opcodes[] = {MOV, ADD, SUB, ADC, SBC, AND, OR, EOR,
+            COM, /*NEG,*/ INC, DEC, TST, CLR, SER/*,
+            ANDI, ORI, CBR*/};
         int num_opcodes = sizeof(opcodes) / sizeof(int);
         program[index].opcode = opcodes[rand() % num_opcodes];
+        program[index].reg_d = num_opcodes % REGISTER_LIMIT;
+        program[index].reg_r = num_opcodes % REGISTER_LIMIT;
     }
     int newcost = total_reg_error(testcase, program);
     if(accept_mcmc_transition(oldcost, newcost)) {
@@ -180,17 +184,32 @@ mcmc_instr(vector<instr_t> &program, const int oldcost,
     return oldcost;
 }
 
-void 
+void
 mcmc(const vector<testpoint> &testcase, vector<instr_t> &program) {
-    const int MOVES = 10000;
+    const int MOVES = 100000;
     const int opcodes [] = {ADD, SUB, MOV};
     const int num_opcodes = sizeof(opcodes) / sizeof(int);
+    vector<instr_t> synprog(program);
+    vector<instr_t> bestprog(program);
+    int bestcost;
+
+    if(MODE == SYNTHESIS) {
+        bestcost = 1e8;
+    }
+    else if(MODE == OPTIMIZATION) {
+        bestcost = total_reg_error(testcase, synprog);
+    }
 
     for(int restarts = 0; restarts < NUM_RESTARTS; ++restarts) {
-        for(auto &instr: program) {
-            instr.opcode = opcodes[rand() % num_opcodes];
-            instr.reg_d = rand() % REGISTER_LIMIT;
-            instr.reg_r = rand() % REGISTER_LIMIT;
+        if(MODE == SYNTHESIS) {
+            for(auto &instr: program) {
+                instr.opcode = opcodes[rand() % num_opcodes];
+                instr.reg_d = rand() % REGISTER_LIMIT;
+                instr.reg_r = rand() % REGISTER_LIMIT;
+            }
+        }
+        else if(MODE == OPTIMIZATION) {
+            program = synprog;
         }
         int cost = total_reg_error(testcase, program);
         printf("cost before = %d\n", cost);
@@ -210,22 +229,26 @@ mcmc(const vector<testpoint> &testcase, vector<instr_t> &program) {
             }
         }
         printf("\t\tcost after = %d\n", cost);
-        if(cost == 0) for(auto &instr: program) {
+        if(cost < bestcost) for(auto &instr: program) {
             print_instr(instr);
+            bestcost = cost;
+            bestprog = program;
         }
-
     }
+    program = bestprog;
 }
-
-
-
-
 
 int main(int argc, char* argv[]) {
     srand(time(NULL));
     vector<testpoint> testcase;
-    vector<instr_t> program(5);
+    vector<instr_t> program(PROGRAM_LEN);
     read_testcase(argv[1], testcase);
     cout << argv[1] << "\n";
+    printf("entering SYSTHESIS phase ...\n");
+    MODE = SYNTHESIS; 
+    mcmc(testcase, program);
+    printf("entering OPTIMIZATION phase ...\n");
+    MODE = OPTIMIZATION; 
+    beta = 0.1; 
     mcmc(testcase, program);
 }
