@@ -8,7 +8,7 @@
    * constants in instructions (+ random constants)
    * ADDW, SUBW, MUL instructions.
    * UNUSED/NOP instructions.
-   * proper function for randomization.
+   * ~~~~ proper function for randomization. ~~~
    * shift bits.
 3. Run the real benchmarks on the testcases.
    * Add Load-Store instructions.

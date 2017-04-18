@@ -15,6 +15,8 @@ float to_fixed_point(int8_t num) {
 
 void run_program(state_t &state, std::vector<instr_t> program) {
     for(auto &instr: program) {
+        if(instr.opcode == UNUSED)
+            continue;
         if(instr.opcode <= 32)
             run_arith_logic(state, instr);
         else if(instr.opcode >= 100)

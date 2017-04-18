@@ -6,6 +6,7 @@
 #include "../run_program.h"
 
 typedef pair<int8_t, int8_t> testpoint;
+typedef vector<testpoint> testcase_t;
 double beta = 2.0;
 
 const int REGISTER_LIMIT = 2;
@@ -20,6 +21,26 @@ int8_t popcount(uint8_t num) {
         penalty++;
     }
     return ans;
+}
+
+void print_instr(const instr_t &instr) {
+    switch(instr.opcode) {
+        case ADD:
+            printf("ADD %d %d\n", instr.reg_r, instr.reg_d);
+            break;
+        case SUB:
+            printf("SUB %d %d\n", instr.reg_r, instr.reg_d);
+            break;
+        case MOV:
+            printf("MOV %d %d\n", instr.reg_r, instr.reg_d);
+            break;
+        case UNUSED:
+            printf("UNUSED\n");
+            break;
+        default:
+            printf("WTF!!! %d\n", instr.opcode);
+            exit(0);
+    }
 }
 
 void read_testcase(const char filename[], vector<testpoint> &testcase) {
@@ -52,158 +73,159 @@ int total_reg_error(const vector<testpoint> &testcase,
     return error;
 }
 
-inline void change_opcode_2_registers(instr_t &instr) {
-    const int opcodes[] = {MOV, ADD, SUB/*, ADC, SBC, AND, OR, EOR*/};
-    const int num_opcodes = sizeof(opcodes) / sizeof(int);
-    // cout << "(" << instr.opcode;
-    instr.opcode = opcodes[rand() % num_opcodes];
-    // cout << ", " << instr.opcode << ")\n";
+
+inline bool 
+accept_mcmc_transition(const int prevcost, const int newcost) {
+    float accept_prob = min(1.0, exp(-beta * newcost / prevcost));
+    return (rand() % 100000 <= accept_prob * 100000);
 }
 
-inline void change_opcode(instr_t &instr) {
-    switch(instr.opcode) {
-        case MOV:
-        case ADD:
-        case SUB:
-        case ADC:
-        case SBC:
-        case AND:
-        case OR:
-        case EOR:
-            change_opcode_2_registers(instr);
+inline int
+mcmc_opcode(vector<instr_t> &program, const int oldcost, 
+        const vector<testpoint> &testcase) {
+    const int index = rand() % program.size();
+    const instr_t cached_instr = program[index];
+    // 
+    switch(cached_instr.opcode) {
+        case UNUSED:
             break;
-    }
-}
-
-inline void change_dest_register(instr_t &instr) {
-    switch(instr.opcode) {
-        case MOV:
-        case ADD:
-        case ADC:
-        case SUB:
-        case SBC:
-        case AND:
-        case OR:
-        case EOR:
-            // source register can be r0 .. r3
-            instr.reg_d = rand () % REGISTER_LIMIT;
-    }
-}
-
-inline void change_src_register(instr_t &instr) {
-    switch(instr.opcode) {
-        case MOV:
-        case ADD:
-        case SUB:
-        case ADC:
-        case SBC:
-        case AND:
-        case OR:
-        case EOR:
-            // source register can be r0 .. r3
-            instr.reg_r = rand () % REGISTER_LIMIT;
-    }
-}
-
-
-void mcmc_search(const vector<testpoint> &testcase, 
-        vector<instr_t> &program) {
-
-    int prevcost = total_reg_error(testcase, program);
-    for(int i = 0; i < 10000; ++i) {
-        int prog_index = rand() % program.size();
-        // printf("pi = %d:\t", prog_index);
-        instr_t previnstr = program[prog_index];
-
-        int decider = rand () % 100;
-        if(decider < 90) {
-            // printf("op:");
-            change_opcode(program[prog_index]);
-        }
-        else if(decider < 95) {
-            // printf("dr:");
-            change_dest_register(program[prog_index]);
-        }
-        else {
-            // printf("sr:");
-            change_src_register(program[prog_index]);
-        }
-
-        int newcost = total_reg_error(testcase, program);
-
-        // printf("\t%d ---> %d\n", prevcost, newcost);
-        float accept = min(1.0, exp(-beta * newcost / prevcost));
-        // printf("acc = %lf\t", accept);
-
-        if(rand() % 100000 < accept * 100000) {
-            prevcost = newcost;
-            //printf("ACCEPTED\n");
-        }
-        else {
-            program[prog_index] = previnstr;
-            // printf("REJECTED\n");
-        }
-    }
-}
-
-void print_instr(const instr_t &instr) {
-    switch(instr.opcode) {
-        case ADD:
-            printf("ADD %d %d\n", instr.reg_r, instr.reg_d);
-            break;
-        case SUB:
-            printf("SUB %d %d\n", instr.reg_r, instr.reg_d);
-            break;
-        case MOV:
-            printf("MOV %d %d\n", instr.reg_r, instr.reg_d);
-            break;
+        case MOV: case ADD: case SUB: case ADC:
+        case SBC: case AND: case OR: case EOR:
+            {
+                const int opcodes[] = 
+                    { MOV, ADD, SUB, /*ADC, SBC, AND, OR, EOR */};
+                const int num_opcodes = sizeof(opcodes) / sizeof(int);
+                program[index].opcode = opcodes[rand() % num_opcodes];
+                break;
+            }
+        // TODO: add other instructoins 
         default:
-            printf("WTF!!!");
-
+            assert(false);
     }
+
+    const int newcost = total_reg_error(testcase, program);
+    if(accept_mcmc_transition(oldcost, newcost)) {
+        return newcost;
+    }
+    program[index] = cached_instr;
+    return oldcost;
+}
+
+inline int
+mcmc_operand(vector<instr_t> &program, const int oldcost, 
+        const vector<testpoint> &testcase) {
+    const int index = rand() % program.size();
+    const instr_t cached_instr = program[index];
+
+    switch(cached_instr.opcode) {
+        case UNUSED:
+            break;
+        case MOV: case ADD: case SUB: case ADC:
+        case SBC: case AND: case OR: case EOR:
+            // if random number is even then change src register
+            // if random number is odd then change dest register
+            if(rand() & 1)
+                program[index].reg_r = rand() % REGISTER_LIMIT;
+            else
+                program[index].reg_d = rand() % REGISTER_LIMIT;
+            break;
+        /* * TODO: add other instructions */
+        default:
+            assert(false);
+    }
+    const int newcost = total_reg_error(testcase, program);
+    if(accept_mcmc_transition(oldcost, newcost)) {
+        return newcost;
+    }
+    program[index] = cached_instr;
+    return oldcost;
 }
 
 
-void test_subtraction() {
-    state_t state;
-    clear_state(state);
-    state.reg[0] = 32;
-    state.reg[1] = 64;
-
-
-    instr_t instr;
-    instr.opcode = SUB;
-    instr.reg_d = 0;
-    instr.reg_r = 1;
-
-    print_bitform(state.reg[0]);
-    print_bitform(state.reg[1]);
-    run_arith_logic(state, instr);
-    print_bitform(state.reg[0]);
-    print_bitform(state.reg[1]);
-
+inline int
+mcmc_swap(vector<instr_t> &program, const int oldcost, 
+        const vector<testpoint> &testcase) {
+    int index1 = rand() % program.size();
+    int index2 = rand() % program.size();
+    swap(program[index1], program[index2]);
+    const int newcost = total_reg_error(testcase, program);
+    if(accept_mcmc_transition(oldcost, newcost)) {
+        return newcost;
+    }
+    swap(program[index1], program[index2]);
+    return oldcost;
 }
 
-int main(int argc, char* argv[]) {
-    srand(time(NULL));
-    vector<testpoint> testcase;
-    vector<instr_t> program(10);
-    read_testcase(argv[1], testcase);
-    cout << argv[1] << "\n";
+inline int
+mcmc_instr(vector<instr_t> &program, const int oldcost,
+        const vector<testpoint> &testcase) {
+    const double p_unused = 0.3; // FIXME
+    const int index = rand() % program.size();
+    const instr_t cached_instr = program[index];
+    if(rand() % 100 <= 100 * p_unused) {
+        program[index].opcode = UNUSED;
+    }
+    else {
+        int opcodes[] = {MOV, ADD, SUB, /*ADC, SBC, AND, OR, EOR,
+            COM, NEG, INC, DEC, TST, CLR, SER,  
+            ANDI, ORI, CBR */};
+        int num_opcodes = sizeof(opcodes) / sizeof(int);
+        program[index].opcode = opcodes[rand() % num_opcodes];
+    }
+    int newcost = total_reg_error(testcase, program);
+    if(accept_mcmc_transition(oldcost, newcost)) {
+        return newcost;
+    } 
+    program[index] = cached_instr;
+    return oldcost;
+}
 
-    int opcodes [] = {ADD, SUB, MOV};
-    int num_opcodes = sizeof(opcodes) / sizeof(int);
+void 
+mcmc(const vector<testpoint> &testcase, vector<instr_t> &program) {
+    const int MOVES = 10000;
+    const int opcodes [] = {ADD, SUB, MOV};
+    const int num_opcodes = sizeof(opcodes) / sizeof(int);
+
     for(int restarts = 0; restarts < NUM_RESTARTS; ++restarts) {
         for(auto &instr: program) {
             instr.opcode = opcodes[rand() % num_opcodes];
             instr.reg_d = rand() % REGISTER_LIMIT;
             instr.reg_r = rand() % REGISTER_LIMIT;
         }
-        cout << "first = " << total_reg_error(testcase, program) << "\n";
-        mcmc_search(testcase, program);
-        cout << "final = " << total_reg_error(testcase, program) << "\n";
-        for(auto &instr: program) {
+        int cost = total_reg_error(testcase, program);
+        printf("cost before = %d\n", cost);
+        for(int moves = 0; moves < MOVES; ++moves) {
+            const int randnum = rand() % 100;
+            if(randnum < 25) {
+                cost = mcmc_opcode(program, cost, testcase);
+            }
+            else if(randnum < 50) {
+                cost = mcmc_operand(program, cost, testcase);
+            }
+            else if(randnum < 75) {
+                cost = mcmc_swap(program, cost, testcase);
+            }
+            else {
+                cost = mcmc_instr(program, cost, testcase);
+            }
+        }
+        printf("\t\tcost after = %d\n", cost);
+        if(cost == 0) for(auto &instr: program) {
             print_instr(instr);
         }
+
     }
+}
+
+
+
+
+
+int main(int argc, char* argv[]) {
+    srand(time(NULL));
+    vector<testpoint> testcase;
+    vector<instr_t> program(5);
+    read_testcase(argv[1], testcase);
+    cout << argv[1] << "\n";
+    mcmc(testcase, program);
 }

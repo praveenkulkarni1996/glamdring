@@ -61,5 +61,6 @@ struct instr_t {
 #define FMULS 26
 #define FMULSU 27
 #define DES 28
+#define UNUSED 120 // --not yet implemented
 
 // table 4-3
