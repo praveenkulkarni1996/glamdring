@@ -39,7 +39,7 @@ struct instr_t {
 #define SUBI 5
 #define SBC 6
 #define SBCI 7
-#define SBIW 100 // not implemented
+#define SBIW 99 // not implemented
 #define AND 8
 #define ANDI 9
 #define OR 10
@@ -62,5 +62,19 @@ struct instr_t {
 #define FMULSU 27
 #define DES 28
 #define UNUSED 120 // --not yet implemented
+
+// data transfer instructions
+#define MOV 100
+#define MOVW 101
+#define LDI 102
+#define LDS 103
+
+// bit shift operstaions
+#define LSL 121
+#define LSR 122
+#define ROL 123 // NI
+#define ROR 124 // NI
+#define ASR 125
+#define SWAP 126 // NI
 
 // table 4-3

@@ -11,8 +11,8 @@
    * ~~~~ proper function for randomization. ~~~
    * shift bits.
 3. Run the real benchmarks on the testcases.
-   * Add Load-Store instructions.
-   * Branch Level instructions.
+   * Add Load-Store instructions. ~~ [partially done]
+   * Branch Level instructions. 
    * Add function calls. (figure this out)
 4. Create new benchmarks.
    * sin, tanh, log, x^y.

@@ -2,10 +2,6 @@
 #include "isa.h"
 #include <cassert>
 
-#define MOV 100
-#define MOVW 101
-#define LDI 102
-#define LDS 103
 
 // data transfer instructions
 void run_dt_instruction(state_t &state, const instr_t &instr) {
