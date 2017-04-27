@@ -1,7 +1,7 @@
 #include <iostream>
 #include <cmath>
 #include <cassert>
-#include "../run_program.h"
+// #include "../run_program.h"
 using namespace std;
 
 const double fixed_point = 1 / double(32);

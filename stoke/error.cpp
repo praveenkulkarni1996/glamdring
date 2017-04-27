@@ -13,9 +13,9 @@ typedef pair<int8_t, int8_t> testpoint;
 typedef vector<testpoint> testcase_t;
 double beta = 1.0;
 
-const int REGISTER_LIMIT = 2;
+const int REGISTER_LIMIT = 1;
 const int NUM_RESTARTS = 10;
-const int PROGRAM_LEN = 10;
+const int PROGRAM_LEN = 3;
 bool MODE = SYNTHESIS;
 
 inline int popcount(uint8_t num) {
@@ -91,9 +91,12 @@ mcmc_opcode(vector<instr_t> &program, const int oldcost,
             }
         case INC: case DEC: case COM: case NEG:
         case TST: case CLR: case SER:
+        case LSL: case LSR: case ASR:
+        case ROL: case ROR: case SWAP:
             {
                 const int opcodes[] = 
-                {INC, DEC, COM, /*NEG,*/ TST, CLR, SER};
+                {INC, DEC, COM, /*NEG,*/ TST, CLR, SER, LSL, LSR, ASR, 
+                    ROL, ROR, SWAP};
                 const int num_opcodes = sizeof(opcodes) / sizeof(int);
                 program[index].opcode = opcodes[rand() % num_opcodes];
                 break;
@@ -130,6 +133,8 @@ mcmc_operand(vector<instr_t> &program, const int oldcost,
             break;
         case INC: case DEC: case COM: case NEG:
         case TST: case CLR: case SER:
+        case LSL: case LSR: case ASR:
+        case ROL: case ROR: case SWAP:
             program[index].reg_d = rand() % REGISTER_LIMIT;
             break;
         default:
@@ -170,7 +175,9 @@ mcmc_instr(vector<instr_t> &program, const int oldcost,
     else {
         int opcodes[] = {MOV, ADD, SUB, ADC, SBC, AND, OR, EOR,
             COM, /*NEG,*/ INC, DEC, TST, CLR, SER/*,
-            ANDI, ORI, CBR*/};
+            ANDI, ORI, CBR*/,
+            LSL, LSR, ASR, ROL, ROR, SWAP
+        };
         int num_opcodes = sizeof(opcodes) / sizeof(int);
         program[index].opcode = opcodes[rand() % num_opcodes];
         program[index].reg_d = num_opcodes % REGISTER_LIMIT;
