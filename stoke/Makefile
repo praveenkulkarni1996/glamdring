@@ -1,5 +1,5 @@
 all:
-	g++ -O3 -std=c++14 error.cpp -o error
+	g++ -O3 -march=native -std=c++14 error.cpp -o error
 
 run: all
 	./error ../testcase/exp_testcase.txt
@@ -12,6 +12,9 @@ inc: all
 
 dec: all
 	./error ../testcase/dec_testcase.txt
+
+two: all
+	./error ../testcase/two_testcase.txt
 
 clean:
 	rm error

@@ -62,11 +62,6 @@ void run_bits(state_t &state, const instr_t &instr) {
                 int8_t lo = (state.reg[instr.reg_d] & 0x0f);
                 int8_t hi = (state.reg[instr.reg_d] & 0xf0);
                 res = (lo << 4) | ((hi >> 4) & 0x0f);
-                print_bitform(state.reg[instr.reg_d]);
-                print_bitform(lo);
-                print_bitform(hi);
-                print_bitform(res);
-                exit(0);
                 h = state.flags[H_FLAG];
                 n = state.flags[N_FLAG];
                 z = state.flags[Z_FLAG];

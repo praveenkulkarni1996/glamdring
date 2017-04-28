@@ -3,8 +3,11 @@
 #include <cstdlib>
 #include <ctime>
 #include <cmath>
+#include <chrono>
 #include "../run_program.h"
 #include "helper.h"
+
+using namespace std::chrono;
 
 #define SYNTHESIS false
 #define OPTIMIZATION true
@@ -13,14 +16,14 @@ typedef pair<int8_t, int8_t> testpoint;
 typedef vector<testpoint> testcase_t;
 double beta = 1.0;
 
-const int REGISTER_LIMIT = 1;
-const int NUM_RESTARTS = 10;
-const int PROGRAM_LEN = 3;
+const int REGISTER_LIMIT = 8;
+const int NUM_RESTARTS = 6;
+const int PROGRAM_LEN = 20;
 bool MODE = SYNTHESIS;
 
 inline int popcount(uint8_t num) {
     // not just popcount, penalized popcount
-    const int scale = 1; 
+    const int scale = 1;
     int ans = 0;
     for(int i=0, penalty = scale; i < 8; i++, penalty += scale) {
         ans += (penalty) * ((num >> i) & 1);
@@ -46,7 +49,7 @@ void clear_state(state_t &state) {
     memset(state.flags, 0, sizeof(state.flags));
 }
 
-int total_reg_error(const vector<testpoint> &testcase, 
+int total_reg_error(const vector<testpoint> &testcase,
         const vector<instr_t> &program) {
     state_t state;
     int error = 0;
@@ -65,25 +68,25 @@ int total_reg_error(const vector<testpoint> &testcase,
 }
 
 
-inline bool 
+inline bool
 accept_mcmc_transition(const int prevcost, const int newcost) {
     float accept_prob = min(1.0, exp(-beta * newcost / prevcost));
     return (rand() % 100000 <= accept_prob * 100000);
 }
 
 inline int
-mcmc_opcode(vector<instr_t> &program, const int oldcost, 
+mcmc_opcode(vector<instr_t> &program, const int oldcost,
         const vector<testpoint> &testcase) {
     const int index = rand() % program.size();
     const instr_t cached_instr = program[index];
-    // 
+    //
     switch(cached_instr.opcode) {
         case UNUSED:
             break;
         case MOV: case ADD: case SUB: case ADC:
         case SBC: case AND: case OR: case EOR:
             {
-                const int opcodes[] = 
+                const int opcodes[] =
                     { MOV, ADD, SUB, ADC, SBC, AND, OR, EOR};
                 const int num_opcodes = sizeof(opcodes) / sizeof(int);
                 program[index].opcode = opcodes[rand() % num_opcodes];
@@ -94,8 +97,8 @@ mcmc_opcode(vector<instr_t> &program, const int oldcost,
         case LSL: case LSR: case ASR:
         case ROL: case ROR: case SWAP:
             {
-                const int opcodes[] = 
-                {INC, DEC, COM, /*NEG,*/ TST, CLR, SER, LSL, LSR, ASR, 
+                const int opcodes[] =
+                {INC, DEC, COM, /*NEG,*/ TST, CLR, SER, LSL, LSR, ASR,
                     ROL, ROR, SWAP};
                 const int num_opcodes = sizeof(opcodes) / sizeof(int);
                 program[index].opcode = opcodes[rand() % num_opcodes];
@@ -114,7 +117,7 @@ mcmc_opcode(vector<instr_t> &program, const int oldcost,
 }
 
 inline int
-mcmc_operand(vector<instr_t> &program, const int oldcost, 
+mcmc_operand(vector<instr_t> &program, const int oldcost,
         const vector<testpoint> &testcase) {
     const int index = rand() % program.size();
     const instr_t cached_instr = program[index];
@@ -150,7 +153,7 @@ mcmc_operand(vector<instr_t> &program, const int oldcost,
 
 
 inline int
-mcmc_swap(vector<instr_t> &program, const int oldcost, 
+mcmc_swap(vector<instr_t> &program, const int oldcost,
         const vector<testpoint> &testcase) {
     int index1 = rand() % program.size();
     int index2 = rand() % program.size();
@@ -186,14 +189,14 @@ mcmc_instr(vector<instr_t> &program, const int oldcost,
     int newcost = total_reg_error(testcase, program);
     if(accept_mcmc_transition(oldcost, newcost)) {
         return newcost;
-    } 
+    }
     program[index] = cached_instr;
     return oldcost;
 }
 
 void
 mcmc(const vector<testpoint> &testcase, vector<instr_t> &program) {
-    const int MOVES = 100000;
+    const int MOVES = 1000000;
     const int opcodes [] = {ADD, SUB, MOV};
     const int num_opcodes = sizeof(opcodes) / sizeof(int);
     vector<instr_t> synprog(program);
@@ -220,6 +223,8 @@ mcmc(const vector<testpoint> &testcase, vector<instr_t> &program) {
         }
         int cost = total_reg_error(testcase, program);
         printf("cost before = %d\n", cost);
+        // core loop
+        high_resolution_clock::time_point t1 = high_resolution_clock::now();
         for(int moves = 0; moves < MOVES; ++moves) {
             const int randnum = rand() % 100;
             if(randnum < 25) {
@@ -235,6 +240,12 @@ mcmc(const vector<testpoint> &testcase, vector<instr_t> &program) {
                 cost = mcmc_instr(program, cost, testcase);
             }
         }
+        high_resolution_clock::time_point t2 = high_resolution_clock::now();
+        const int duration = duration_cast<microseconds> (t2 - t1).count();
+        const int exec_instrs = (MOVES * PROGRAM_LEN);
+        const int i_per_second = exec_instrs / duration;
+        printf("\t\tduration = %d, instrs = %d\n", duration, exec_instrs);
+        printf("\t\tinstrs/second = %d\n", i_per_second);
         printf("\t\tcost after = %d\n", cost);
         if(cost < bestcost) for(auto &instr: program) {
             print_instr(instr);
@@ -245,6 +256,17 @@ mcmc(const vector<testpoint> &testcase, vector<instr_t> &program) {
     program = bestprog;
 }
 
+
+int testcase_two(testcase_t testcase) {
+    vector<instr_t> program (1);
+    for(instr_t &instr: program) {
+      instr.opcode = LSL;
+      instr.reg_d = 0;
+    }
+    int error = total_reg_error(testcase, program);
+    printf("error = %d\n", error);
+}
+
 int main(int argc, char* argv[]) {
     srand(time(NULL));
     vector<testpoint> testcase;
@@ -252,10 +274,10 @@ int main(int argc, char* argv[]) {
     read_testcase(argv[1], testcase);
     cout << argv[1] << "\n";
     printf("entering SYSTHESIS phase ...\n");
-    MODE = SYNTHESIS; 
+    MODE = SYNTHESIS;
     mcmc(testcase, program);
     printf("entering OPTIMIZATION phase ...\n");
-    MODE = OPTIMIZATION; 
-    beta = 0.1; 
+    MODE = OPTIMIZATION;
+    beta = 0.1;
     mcmc(testcase, program);
 }

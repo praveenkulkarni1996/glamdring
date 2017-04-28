@@ -35,6 +35,18 @@ void print_instr(const instr_t &instr) {
         case DEC:
             printf("DEC %d\n", instr.reg_d);
             break;
+        case LSL:
+            printf("LSL %d\n", instr.reg_d);
+            break;
+        case LSR:
+            printf("LSR %d\n", instr.reg_d);
+            break;
+        case ASR:
+            printf("ASR %d\n", instr.reg_d);
+            break;
+        case SWAP:
+            printf("SWAP %d\n", instr.reg_d);
+            break;
         default:
             printf("WTF!!! %d\n", instr.opcode);
     }

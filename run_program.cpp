@@ -15,6 +15,7 @@ float to_fixed_point(int8_t num) {
 }
 
 void run_program(state_t &state, std::vector<instr_t> program) {
+    printf("in run program\n");
     for(auto &instr: program) {
         if(instr.opcode == UNUSED)
             continue;
@@ -22,12 +23,15 @@ void run_program(state_t &state, std::vector<instr_t> program) {
             run_arith_logic(state, instr);
         else if(100 <= instr.opcode and instr.opcode <= 110)
             run_dt_instruction(state, instr);
-        else if(120 <= instr.opcode and instr.opcode <= 126) 
+        else if(120 <= instr.opcode and instr.opcode <= 126)
             run_bits(state, instr);
         // for(int i = 0; i < 5; ++i) {
         //     printf("%d: %f\n", i, to_fixed_point(state.reg[i]));
         // }
         // printf("----\n");
+        if(instr.opcode == LSL) {
+          printf("LSL in run_program\n");
+        }
     }
 }
 

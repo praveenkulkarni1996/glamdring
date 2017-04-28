@@ -1,6 +1,7 @@
 #pragma once
 #include <iostream>
 #include <vector>
+#include <bits/stdc++.h>
 
 #define REGISTERS 32
 #define MEMORY 2048

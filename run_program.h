@@ -1,6 +1,7 @@
-// #include "isa.h"
+#include "isa.h"
 #include "arith_logic.h"
 #include "data_transfer.h"
+#include "bit_instr.h"
 #include <vector>
 using namespace std;
 
@@ -13,12 +14,15 @@ float to_fixed_point(int8_t num) {
     return ans;
 }
 
-void run_program(state_t &state, std::vector<instr_t> program) {
+void run_program(state_t &state, const std::vector<instr_t> &program) {
     for(auto &instr: program) {
         if(instr.opcode <= 32)
             run_arith_logic(state, instr);
-        else if(instr.opcode >= 100)
+        else if(100 <= instr.opcode and instr.opcode <= 110)
             run_dt_instruction(state, instr);
+        else if(120 <= instr.opcode and instr.opcode <= 126) {
+            run_bits(state, instr);
+        }
         // for(int i = 0; i < 5; ++i) {
         //     printf("%d: %f\n", i, to_fixed_point(state.reg[i]));
         // }
