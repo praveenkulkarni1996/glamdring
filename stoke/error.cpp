@@ -17,11 +17,12 @@ typedef vector<testpoint> testcase_t;
 double beta = 1.0;
 
 const int REGISTER_LIMIT = 8;
-const int NUM_RESTARTS = 6;
+const int NUM_RESTARTS = 1;
 const int PROGRAM_LEN = 20;
 bool MODE = SYNTHESIS;
 
-inline int popcount(uint8_t num) {
+inline int 
+popcount(uint8_t num) {
     // not just popcount, penalized popcount
     const int scale = 1;
     int ans = 0;
@@ -32,7 +33,8 @@ inline int popcount(uint8_t num) {
 }
 
 
-void read_testcase(const char filename[], vector<testpoint> &testcase) {
+inline void 
+read_testcase(const char filename[], vector<testpoint> &testcase) {
     ifstream fin(filename);
     int x, y;
     while(fin >> x >> y) {
@@ -49,22 +51,25 @@ void clear_state(state_t &state) {
     memset(state.flags, 0, sizeof(state.flags));
 }
 
-int total_reg_error(const vector<testpoint> &testcase,
+inline int 
+total_reg_error(const vector<testpoint> &testcase,
         const vector<instr_t> &program) {
     state_t state;
-    int error = 0;
+    int error[REGISTER_LIMIT] = {0};
     for(auto &tp: testcase) {
         clear_state(state);
         state.reg[0] = tp.first;
         run_program(state, program);
-        error += popcount((uint8_t)(state.reg[0] ^ tp.second));
+        for(int i = 0; i < REGISTER_LIMIT; ++i)
+            error[i] += popcount((uint8_t)(state.reg[i] ^ tp.second));
     }
+    int inefficency_cost = 0;
     if(MODE == OPTIMIZATION) {
         for(auto &instr: program) {
-            error += get_cost(instr);
+            inefficency_cost += get_cost(instr);
         }
     }
-    return error;
+    return *min_element(error, error + REGISTER_LIMIT) + inefficency_cost;
 }
 
 
@@ -243,9 +248,9 @@ mcmc(const vector<testpoint> &testcase, vector<instr_t> &program) {
         high_resolution_clock::time_point t2 = high_resolution_clock::now();
         const int duration = duration_cast<microseconds> (t2 - t1).count();
         const int exec_instrs = (MOVES * PROGRAM_LEN);
-        const int i_per_second = exec_instrs / duration;
+        const double i_per_second = 1e6 * ((double) exec_instrs / (double) duration);
         printf("\t\tduration = %d, instrs = %d\n", duration, exec_instrs);
-        printf("\t\tinstrs/second = %d\n", i_per_second);
+        printf("\t\tinstrs/second = %f\n", i_per_second);
         printf("\t\tcost after = %d\n", cost);
         if(cost < bestcost) for(auto &instr: program) {
             print_instr(instr);
@@ -265,6 +270,7 @@ int testcase_two(testcase_t testcase) {
     }
     int error = total_reg_error(testcase, program);
     printf("error = %d\n", error);
+    return 0;
 }
 
 int main(int argc, char* argv[]) {
