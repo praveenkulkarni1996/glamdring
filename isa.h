@@ -1,7 +1,7 @@
 #pragma once
 #include <iostream>
 #include <vector>
-#include <bits/stdc++.h>
+// #include <bits/stdc++.h>
 
 #define REGISTERS 32
 #define MEMORY 2048
@@ -73,9 +73,9 @@ struct instr_t {
 // bit shift operstaions
 #define LSL 121
 #define LSR 122
-#define ROL 123 // NI
-#define ROR 124 // NI
+#define ROL 123
+#define ROR 124
 #define ASR 125
-#define SWAP 126 // NI
+#define SWAP 126
 
 // table 4-3

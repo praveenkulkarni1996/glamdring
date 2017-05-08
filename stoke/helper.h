@@ -44,6 +44,12 @@ void print_instr(const instr_t &instr) {
         case ASR:
             printf("ASR %d\n", instr.reg_d);
             break;
+        case ROR:
+            printf("ROR %d\n", instr.reg_d);
+            break;
+        case ROL:
+            printf("ROL %d\n", instr.reg_d);
+            break;
         case SWAP:
             printf("SWAP %d\n", instr.reg_d);
             break;

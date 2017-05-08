@@ -14,14 +14,24 @@ using namespace std::chrono;
 
 typedef pair<int8_t, int8_t> testpoint;
 typedef vector<testpoint> testcase_t;
+
+// for the <a, b> ----> y
+typedef pair<int8_t, int8_t> input2_t;
+typedef int8_t output_t;
+typedef pair<input2_t, output_t> testpt2_t;
+typedef vector<testpt2_t> testcase2_t;
+
 double beta = 1.0;
 
-const int REGISTER_LIMIT = 8;
-const int NUM_RESTARTS = 1;
-const int PROGRAM_LEN = 20;
+const int REGISTER_LIMIT = 2;
+const int NUM_RESTARTS = 100;
+const int PROGRAM_LEN = 6;
+const int SCALE = 1;
 bool MODE = SYNTHESIS;
 
-inline int 
+const bool TWO_INPUTS = true;
+
+inline int
 popcount(uint8_t num) {
     // not just popcount, penalized popcount
     const int scale = 1;
@@ -33,7 +43,7 @@ popcount(uint8_t num) {
 }
 
 
-inline void 
+inline void
 read_testcase(const char filename[], vector<testpoint> &testcase) {
     ifstream fin(filename);
     int x, y;
@@ -51,17 +61,19 @@ void clear_state(state_t &state) {
     memset(state.flags, 0, sizeof(state.flags));
 }
 
-inline int 
-total_reg_error(const vector<testpoint> &testcase,
+inline int
+total_reg_error(const testcase_t &testcase,
         const vector<instr_t> &program) {
     state_t state;
-    int error[REGISTER_LIMIT] = {0};
+    int error[REGISTER_LIMIT];
+    memset(error, 0, sizeof(error));
     for(auto &tp: testcase) {
         clear_state(state);
         state.reg[0] = tp.first;
         run_program(state, program);
-        for(int i = 0; i < REGISTER_LIMIT; ++i)
+        for(int i = 0; i < REGISTER_LIMIT; ++i) {
             error[i] += popcount((uint8_t)(state.reg[i] ^ tp.second));
+        }
     }
     int inefficency_cost = 0;
     if(MODE == OPTIMIZATION) {
@@ -69,7 +81,31 @@ total_reg_error(const vector<testpoint> &testcase,
             inefficency_cost += get_cost(instr);
         }
     }
-    return *min_element(error, error + REGISTER_LIMIT) + inefficency_cost;
+    return *min_element(error, error + REGISTER_LIMIT) + SCALE * inefficency_cost;
+}
+
+inline int
+total_reg_error2(const testcase2_t &testcase,
+        const vector<instr_t> &program) {
+    state_t state;
+    int error[REGISTER_LIMIT];
+    memset(error, 0, sizeof(error));
+    for(auto &tp: testcase) {
+        clear_state(state);
+        state.reg[0] = tp.first.first;
+        state.reg[1] = tp.first.second;
+        run_program(state, program);
+        for(int i = 0; i < REGISTER_LIMIT; ++i) {
+            error[i] += popcount((uint8_t)(state.reg[i] ^ tp.second));
+        }
+    }
+    int inefficency_cost = 0;
+    if(MODE == OPTIMIZATION) {
+        for(auto &instr: program) {
+            inefficency_cost += get_cost(instr);
+        }
+    }
+    return *min_element(error, error + REGISTER_LIMIT) + SCALE * inefficency_cost;
 }
 
 
@@ -92,7 +128,7 @@ mcmc_opcode(vector<instr_t> &program, const int oldcost,
         case SBC: case AND: case OR: case EOR:
             {
                 const int opcodes[] =
-                    { MOV, ADD, SUB, ADC, SBC, AND, OR, EOR};
+                    { MOV, ADD, SUB, /*ADC, SBC,*/ AND, OR, EOR};
                 const int num_opcodes = sizeof(opcodes) / sizeof(int);
                 program[index].opcode = opcodes[rand() % num_opcodes];
                 break;
@@ -103,8 +139,8 @@ mcmc_opcode(vector<instr_t> &program, const int oldcost,
         case ROL: case ROR: case SWAP:
             {
                 const int opcodes[] =
-                {INC, DEC, COM, /*NEG,*/ TST, CLR, SER, LSL, LSR, ASR,
-                    ROL, ROR, SWAP};
+                {INC, DEC, /*COM, NEG, TST, CLR, SER, LSL, LSR, ASR,
+                    ROL, ROR, SWAP*/};
                 const int num_opcodes = sizeof(opcodes) / sizeof(int);
                 program[index].opcode = opcodes[rand() % num_opcodes];
                 break;
@@ -181,10 +217,10 @@ mcmc_instr(vector<instr_t> &program, const int oldcost,
         program[index].opcode = UNUSED;
     }
     else {
-        int opcodes[] = {MOV, ADD, SUB, ADC, SBC, AND, OR, EOR,
-            COM, /*NEG,*/ INC, DEC, TST, CLR, SER/*,
-            ANDI, ORI, CBR*/,
-            LSL, LSR, ASR, ROL, ROR, SWAP
+        int opcodes[] = {MOV, ADD, SUB, /*ADC, SBC,*/ AND, OR, EOR,/*
+            COM, NEG,*/ INC, DEC, /*TST, CLR, SER,
+            ANDI, ORI, CBR,*/
+            /*LSL, LSR, ASR, ROL, ROR, SWAP*/
         };
         int num_opcodes = sizeof(opcodes) / sizeof(int);
         program[index].opcode = opcodes[rand() % num_opcodes];
@@ -201,7 +237,7 @@ mcmc_instr(vector<instr_t> &program, const int oldcost,
 
 void
 mcmc(const vector<testpoint> &testcase, vector<instr_t> &program) {
-    const int MOVES = 1000000;
+    const int MOVES = 2000000;
     const int opcodes [] = {ADD, SUB, MOV};
     const int num_opcodes = sizeof(opcodes) / sizeof(int);
     vector<instr_t> synprog(program);
@@ -262,7 +298,8 @@ mcmc(const vector<testpoint> &testcase, vector<instr_t> &program) {
 }
 
 
-int testcase_two(testcase_t testcase) {
+int
+testcase_two(testcase_t testcase) {
     vector<instr_t> program (1);
     for(instr_t &instr: program) {
       instr.opcode = LSL;
@@ -273,17 +310,138 @@ int testcase_two(testcase_t testcase) {
     return 0;
 }
 
+int
+testcase_p1(testcase_t testcase) {
+    vector<instr_t> program (3);
+    /* MOV R0 to R1 */
+    /* DEC R1 */
+    /* AND R1, R0 */
+    program[0].opcode = MOV;
+    program[0].reg_d = 1;
+    program[0].reg_r = 0;
+
+    program[1].reg_d = 1;
+    program[1].opcode = DEC;
+
+    program[2].opcode = AND;
+    program[2].reg_r = 1;
+    program[2].reg_d = 0;
+
+    int error = total_reg_error(testcase, program);
+    printf("p1: error = %d\n", error);
+    return error;
+}
+
+int
+testcase_p2(testcase_t testcase) {
+    // is power of 2
+    vector<instr_t> program (3);
+    /* MOV R0 to R1 */
+    /* INC R1 */
+    /* AND R1, R0 */
+    program[0].opcode = MOV;
+    program[0].reg_d = 1;
+    program[0].reg_r = 0;
+
+    program[1].reg_d = 1;
+    program[1].opcode = INC;
+
+    program[2].opcode = AND;
+    program[2].reg_r = 1;
+    program[2].reg_d = 0;
+
+    int error = total_reg_error(testcase, program);
+    printf("p2: error = %d\n", error);
+    return error;
+}
+
+int
+testcase_p3(testcase_t testcase) {
+    vector<instr_t> program (2);
+    /* SUB R0 from R1 */
+    /* AND R1, R0 */
+    program[0].opcode = SUB;
+    program[0].reg_d = 1;
+    program[0].reg_r = 0;
+
+    program[1].opcode = AND;
+    program[1].reg_r = 1;
+    program[1].reg_d = 0;
+
+    int error = total_reg_error(testcase, program);
+    printf("p3: error = %d\n", error);
+    return error;
+}
+
+int
+testcase_p4(testcase_t testcase) {
+    // is power of 2
+    vector<instr_t> program (3);
+    /* MOV R0 to R1 */
+    /* DEC R1 */
+    /* AND R1, R0 */
+    program[0].opcode = MOV;
+    program[0].reg_d = 1;
+    program[0].reg_r = 0;
+
+    program[1].reg_d = 1;
+    program[1].opcode = DEC;
+
+    program[2].opcode = EOR;
+    program[2].reg_r = 1;
+    program[2].reg_d = 0;
+
+    int error = total_reg_error(testcase, program);
+    printf("p4: error = %d\n", error);
+    return error;
+}
+
+int
+testcase_p17(testcase_t testcase) {
+    vector<instr_t> program (5);
+    // o1 = x - 1
+    // o2 = o1 | x
+    // o3 = o2 + 1
+    // res = o3 & x
+    program[0].opcode = MOV;
+    program[0].reg_d = 1;
+    program[0].reg_r = 0;
+
+    program[1].opcode = DEC;
+    program[1].reg_d = 1;
+
+    program[2].opcode = OR;
+    program[2].reg_r = 0;
+    program[2].reg_d = 1;
+
+    program[3].opcode = INC;
+    program[3].reg_d = 1;
+
+    program[4].opcode = AND;
+    program[4].reg_r = 1;
+    program[4].reg_d = 0;
+    int error = total_reg_error(testcase, program);
+    printf("p17: error = %d\n", error);
+    return error;
+}
+
 int main(int argc, char* argv[]) {
     srand(time(NULL));
     vector<testpoint> testcase;
     vector<instr_t> program(PROGRAM_LEN);
     read_testcase(argv[1], testcase);
-    cout << argv[1] << "\n";
+    printf("%s\n", argv[1]);
+
+    if(false) {
+        testcase_p17(testcase);
+        return 0;
+    }
+
     printf("entering SYSTHESIS phase ...\n");
     MODE = SYNTHESIS;
     mcmc(testcase, program);
     printf("entering OPTIMIZATION phase ...\n");
     MODE = OPTIMIZATION;
-    beta = 0.1;
+    beta = 0.5;
     mcmc(testcase, program);
 }
