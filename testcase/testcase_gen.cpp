@@ -28,11 +28,11 @@ int float_to_fixed(float fl_num) {
 
 int main() {
     build_mapping();
-    /*
     for(int i = 0; i <= 255; ++i) {
         cout << i << "\t" << mapping[i] << "\t" << float_to_fixed(mapping[i]) << "\n";
     }
-    */
+    return 0;
+
     for(int i = 0; i <= 255; ++i) {
         float flx = mapping[i];
         float fly = flx * 7; //exp(flx);

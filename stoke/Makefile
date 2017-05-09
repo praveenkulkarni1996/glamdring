@@ -19,6 +19,9 @@ two: all
 sum: all
 	./error ../testcase/sum_testcase.txt
 
+oth: all
+	./error ../testcase/oth_testcase.txt
+
 clean:
 	rm error
 
@@ -33,6 +36,27 @@ p3: all
 
 p4: all
 	./error ../hackers-delight/p4.txt
+
+p5: all
+	./error ../hackers-delight/p5.txt
+
+p6: all
+	./error ../hackers-delight/p6.txt
+
+p7: all
+	./error ../hackers-delight/p7.txt
+
+p8: all
+	./error ../hackers-delight/p8.txt
+
+p9: all
+	./error ../hackers-delight/p9.txt
+
+p14: all
+	./error ../hackers-delight/p14_tail.txt
+
+p15: all
+	./error ../hackers-delight/p15_tail.txt
 
 p17: all
 	./error ../hackers-delight/p17.txt

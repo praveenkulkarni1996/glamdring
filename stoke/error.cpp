@@ -23,13 +23,15 @@ typedef vector<testpt2_t> testcase2_t;
 
 double beta = 1.0;
 
-const int REGISTER_LIMIT = 2;
-const int NUM_RESTARTS = 100;
-const int PROGRAM_LEN = 6;
+const int REGISTER_LIMIT = 4;
+const int NUM_RESTARTS = 50;
+const int PROGRAM_LEN = 15;
 const int SCALE = 1;
 bool MODE = SYNTHESIS;
 
-const bool TWO_INPUTS = true;
+#define TWO_INPUTS false
+
+testcase2_t glob_2testcase;
 
 inline int
 popcount(uint8_t num) {
@@ -53,8 +55,20 @@ read_testcase(const char filename[], vector<testpoint> &testcase) {
     fin.close();
 }
 
+inline void
+read_2input_testcase(const char filename[]) {
+    ifstream fin(filename);
+    glob_2testcase.clear();
+    int x, y, z;
+    while(fin >> x >> y >> z) {
+        glob_2testcase.push_back({{(int8_t)x, (int8_t)y}, (int8_t)z});
+    }
+    fin.close();
+}
 
-void clear_state(state_t &state) {
+
+inline void 
+clear_state(state_t &state) {
     memset(state.reg, 0, sizeof(state.reg));
     return;
     memset(state.mem, 0, sizeof(state.mem));
@@ -67,6 +81,28 @@ total_reg_error(const testcase_t &testcase,
     state_t state;
     int error[REGISTER_LIMIT];
     memset(error, 0, sizeof(error));
+
+    if(TWO_INPUTS) {
+        for(auto &tp: glob_2testcase) {
+            clear_state(state);
+            state.reg[0] = tp.first.first;
+            state.reg[1] = tp.first.second;
+            run_program(state, program);
+            for(int i = 0; i < REGISTER_LIMIT; ++i) {
+                error[i] += popcount((uint8_t)(state.reg[i] ^ tp.second));
+            }
+        }
+        int inefficency_cost = 0;
+        if(MODE == OPTIMIZATION) {
+            for(auto &instr: program) {
+                inefficency_cost += get_cost(instr);
+            }
+        }
+        return *min_element(error, error + REGISTER_LIMIT) 
+            + SCALE * inefficency_cost;
+    }
+
+
     for(auto &tp: testcase) {
         clear_state(state);
         state.reg[0] = tp.first;
@@ -81,7 +117,8 @@ total_reg_error(const testcase_t &testcase,
             inefficency_cost += get_cost(instr);
         }
     }
-    return *min_element(error, error + REGISTER_LIMIT) + SCALE * inefficency_cost;
+    return *min_element(error, error + REGISTER_LIMIT) 
+        + SCALE * inefficency_cost;
 }
 
 inline int
@@ -128,7 +165,7 @@ mcmc_opcode(vector<instr_t> &program, const int oldcost,
         case SBC: case AND: case OR: case EOR:
             {
                 const int opcodes[] =
-                    { MOV, ADD, SUB, /*ADC, SBC,*/ AND, OR, EOR};
+                    { MOV, ADD, SUB, /*ADC, SBC,*/ /*AND, OR, EOR*/};
                 const int num_opcodes = sizeof(opcodes) / sizeof(int);
                 program[index].opcode = opcodes[rand() % num_opcodes];
                 break;
@@ -139,8 +176,8 @@ mcmc_opcode(vector<instr_t> &program, const int oldcost,
         case ROL: case ROR: case SWAP:
             {
                 const int opcodes[] =
-                {INC, DEC, /*COM, NEG, TST, CLR, SER, LSL, LSR, ASR,
-                    ROL, ROR, SWAP*/};
+                {INC, DEC, /*COM, NEG, TST, CLR, SER, *//*LSL, LSR, ASR,*/
+                    /*ROL, ROR, SWAP*/};
                 const int num_opcodes = sizeof(opcodes) / sizeof(int);
                 program[index].opcode = opcodes[rand() % num_opcodes];
                 break;
@@ -217,8 +254,8 @@ mcmc_instr(vector<instr_t> &program, const int oldcost,
         program[index].opcode = UNUSED;
     }
     else {
-        int opcodes[] = {MOV, ADD, SUB, /*ADC, SBC,*/ AND, OR, EOR,/*
-            COM, NEG,*/ INC, DEC, /*TST, CLR, SER,
+        int opcodes[] = {MOV, ADD, SUB, /*ADC, SBC,*/ AND, OR, EOR,
+            /* COM, NEG,*/ INC, DEC, /*TST, CLR, SER,
             ANDI, ORI, CBR,*/
             /*LSL, LSR, ASR, ROL, ROR, SWAP*/
         };
@@ -237,7 +274,7 @@ mcmc_instr(vector<instr_t> &program, const int oldcost,
 
 void
 mcmc(const vector<testpoint> &testcase, vector<instr_t> &program) {
-    const int MOVES = 2000000;
+    const int MOVES = 800000000;
     const int opcodes [] = {ADD, SUB, MOV};
     const int num_opcodes = sizeof(opcodes) / sizeof(int);
     vector<instr_t> synprog(program);
@@ -283,9 +320,9 @@ mcmc(const vector<testpoint> &testcase, vector<instr_t> &program) {
         }
         high_resolution_clock::time_point t2 = high_resolution_clock::now();
         const int duration = duration_cast<microseconds> (t2 - t1).count();
-        const int exec_instrs = (MOVES * PROGRAM_LEN);
+        const long long exec_instrs = (MOVES * 1LL * PROGRAM_LEN);
         const double i_per_second = 1e6 * ((double) exec_instrs / (double) duration);
-        printf("\t\tduration = %d, instrs = %d\n", duration, exec_instrs);
+        printf("\t\tduration = %d,instrs = %lld", duration, exec_instrs);
         printf("\t\tinstrs/second = %f\n", i_per_second);
         printf("\t\tcost after = %d\n", cost);
         if(cost < bestcost) for(auto &instr: program) {
@@ -429,8 +466,14 @@ int main(int argc, char* argv[]) {
     srand(time(NULL));
     vector<testpoint> testcase;
     vector<instr_t> program(PROGRAM_LEN);
-    read_testcase(argv[1], testcase);
     printf("%s\n", argv[1]);
+
+    if(TWO_INPUTS) {
+        read_2input_testcase(argv[1]);
+    }
+    else {
+        read_testcase(argv[1], testcase);
+    }
 
     if(false) {
         testcase_p17(testcase);

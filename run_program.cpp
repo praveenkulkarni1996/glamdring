@@ -78,6 +78,17 @@ void parser(const char filename[], vector<instr_t> &program) {
 }
 
 
+void test_program() {
+    state_t state;
+    vector<instr_t> program;
+    memset(state.mem, 0, sizeof(state.mem));
+    memset(state.reg, 0, sizeof(state.reg));
+    state.reg[0] = 1;
+    state.reg[1] = 2;
+
+}
+
+
 int main() {
     state_t state;
     memset(state.mem, 0, sizeof(state.mem));
