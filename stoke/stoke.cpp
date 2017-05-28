@@ -4,7 +4,7 @@
 #include <ctime>
 #include <cmath>
 #include <chrono>
-#include "../run_program.h"
+#include "../arch/run_program.h"
 #include "helper.h"
 
 using namespace std::chrono;
@@ -27,6 +27,7 @@ const int REGISTER_LIMIT = 4;
 const int NUM_RESTARTS = 50;
 const int PROGRAM_LEN = 15;
 const int SCALE = 1;
+const int MOVES = 800000000;
 bool MODE = SYNTHESIS;
 
 #define TWO_INPUTS false
@@ -77,7 +78,7 @@ clear_state(state_t &state) {
 
 inline int
 total_reg_error(const testcase_t &testcase,
-        const vector<instr_t> &program) {
+                const vector<instr_t> &program) {
     state_t state;
     int error[REGISTER_LIMIT];
     memset(error, 0, sizeof(error));
@@ -274,7 +275,6 @@ mcmc_instr(vector<instr_t> &program, const int oldcost,
 
 void
 mcmc(const vector<testpoint> &testcase, vector<instr_t> &program) {
-    const int MOVES = 800000000;
     const int opcodes [] = {ADD, SUB, MOV};
     const int num_opcodes = sizeof(opcodes) / sizeof(int);
     vector<instr_t> synprog(program);

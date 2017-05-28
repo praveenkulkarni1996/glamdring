@@ -1,63 +1,63 @@
 all:
-	g++ -O3 -march=native -std=c++14 error.cpp -o error
+	g++ -O3 -march=native -std=c++14 stoke.cpp -o stoke
 
 run: all
-	./error ../testcase/exp_testcase.txt
+	./stoke ../testcase/exp_testcase.txt
 
 ml7: all
-	./error ../testcase/ml7_testcase.txt
+	./stoke ../testcase/ml7_testcase.txt
 
 inc: all
-	./error ../testcase/inc_testcase.txt
+	./stoke ../testcase/inc_testcase.txt
 
 dec: all
-	./error ../testcase/dec_testcase.txt
+	./stoke ../testcase/dec_testcase.txt
 
 two: all
-	./error ../testcase/two_testcase.txt
+	./stoke ../testcase/two_testcase.txt
 
 sum: all
-	./error ../testcase/sum_testcase.txt
+	./stoke ../testcase/sum_testcase.txt
 
 oth: all
-	./error ../testcase/oth_testcase.txt
+	./stoke ../testcase/oth_testcase.txt
 
 clean:
-	rm error
+	rm stoke
 
 p1: all
-	./error ../hackers-delight/p1.txt
+	./stoke ../hackers-delight/p1.txt
 
 p2: all
-	./error ../hackers-delight/p2.txt
+	./stoke ../hackers-delight/p2.txt
 
 p3: all
-	./error ../hackers-delight/p3.txt
+	./stoke ../hackers-delight/p3.txt
 
 p4: all
-	./error ../hackers-delight/p4.txt
+	./stoke ../hackers-delight/p4.txt
 
 p5: all
-	./error ../hackers-delight/p5.txt
+	./stoke ../hackers-delight/p5.txt
 
 p6: all
-	./error ../hackers-delight/p6.txt
+	./stoke ../hackers-delight/p6.txt
 
 p7: all
-	./error ../hackers-delight/p7.txt
+	./stoke ../hackers-delight/p7.txt
 
 p8: all
-	./error ../hackers-delight/p8.txt
+	./stoke ../hackers-delight/p8.txt
 
 p9: all
-	./error ../hackers-delight/p9.txt
+	./stoke ../hackers-delight/p9.txt
 
 p14: all
-	./error ../hackers-delight/p14_tail.txt
+	./stoke ../hackers-delight/p14_tail.txt
 
 p15: all
-	./error ../hackers-delight/p15_tail.txt
+	./stoke ../hackers-delight/p15_tail.txt
 
 p17: all
-	./error ../hackers-delight/p17.txt
+	./stoke ../hackers-delight/p17.txt
 
