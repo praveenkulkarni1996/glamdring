@@ -4,7 +4,7 @@
 #include <ctime>
 #include <cmath>
 #include <chrono>
-#include "../run_program.h"
+#include "../arch/run_program.h"
 #include "helper.h"
 
 using namespace std::chrono;

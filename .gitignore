@@ -1,5 +1,5 @@
 *.swp
 *.DS_Store
-stoke/error
+stoke/stoke
 testcase/testcase_gen
 hackers-delight/*

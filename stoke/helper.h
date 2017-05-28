@@ -1,4 +1,4 @@
-#include "../isa.h"
+#include "../arch/isa.h"
 
 void print_instr(const instr_t &instr) {
     switch(instr.opcode) {
