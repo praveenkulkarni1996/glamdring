@@ -7,10 +7,12 @@
 #include "../arch/run_program.h"
 #include "helper.h"
 
-using namespace std::chrono;
-
 #define SYNTHESIS false
 #define OPTIMIZATION true
+
+namespace stoke {
+using namespace std::chrono;
+
 
 typedef pair<int8_t, int8_t> testpoint;
 typedef vector<testpoint> testcase_t;
@@ -27,19 +29,20 @@ const int REGISTER_LIMIT = 4;
 const int NUM_RESTARTS = 50;
 const int PROGRAM_LEN = 15;
 const int SCALE = 1;
-const int MOVES = 800000000;
+const int MOVES = 5000; //800000000;
 bool MODE = SYNTHESIS;
 
 #define TWO_INPUTS false
 
 testcase2_t glob_2testcase;
+vector<testpoint> testcase;
 
 inline int
 popcount(uint8_t num) {
     // not just popcount, penalized popcount
     const int scale = 1;
     int ans = 0;
-    for(int i=0, penalty = scale; i < 8; i++, penalty += scale) {
+    for (int i=0, penalty = scale; i < 8; i++, penalty += scale) {
         ans += (penalty) * ((num >> i) & 1);
     }
     return ans;
@@ -50,7 +53,7 @@ inline void
 read_testcase(const char filename[], vector<testpoint> &testcase) {
     ifstream fin(filename);
     int x, y;
-    while(fin >> x >> y) {
+    while (fin >> x >> y) {
         testcase.push_back({(int8_t)x, (int8_t)y});
     }
     fin.close();
@@ -61,7 +64,7 @@ read_2input_testcase(const char filename[]) {
     ifstream fin(filename);
     glob_2testcase.clear();
     int x, y, z;
-    while(fin >> x >> y >> z) {
+    while (fin >> x >> y >> z) {
         glob_2testcase.push_back({{(int8_t)x, (int8_t)y}, (int8_t)z});
     }
     fin.close();
@@ -154,8 +157,7 @@ accept_mcmc_transition(const int prevcost, const int newcost) {
 }
 
 inline int
-mcmc_opcode(vector<instr_t> &program, const int oldcost,
-        const vector<testpoint> &testcase) {
+mcmc_opcode(vector<instr_t> &program, const int oldcost) {
     const int index = rand() % program.size();
     const instr_t cached_instr = program[index];
     //
@@ -196,8 +198,7 @@ mcmc_opcode(vector<instr_t> &program, const int oldcost,
 }
 
 inline int
-mcmc_operand(vector<instr_t> &program, const int oldcost,
-        const vector<testpoint> &testcase) {
+mcmc_operand(vector<instr_t> &program, const int oldcost) {
     const int index = rand() % program.size();
     const instr_t cached_instr = program[index];
 
@@ -232,8 +233,7 @@ mcmc_operand(vector<instr_t> &program, const int oldcost,
 
 
 inline int
-mcmc_swap(vector<instr_t> &program, const int oldcost,
-        const vector<testpoint> &testcase) {
+mcmc_swap(vector<instr_t> &program, const int oldcost) {
     int index1 = rand() % program.size();
     int index2 = rand() % program.size();
     swap(program[index1], program[index2]);
@@ -246,15 +246,13 @@ mcmc_swap(vector<instr_t> &program, const int oldcost,
 }
 
 inline int
-mcmc_instr(vector<instr_t> &program, const int oldcost,
-        const vector<testpoint> &testcase) {
+mcmc_instr(vector<instr_t> &program, const int oldcost) {
     const double p_unused = 0.3; // FIXME
     const int index = rand() % program.size();
     const instr_t cached_instr = program[index];
-    if(rand() % 100 <= 100 * p_unused) {
+    if (rand() % 100 <= 100 * p_unused) {
         program[index].opcode = UNUSED;
-    }
-    else {
+    } else {
         int opcodes[] = {MOV, ADD, SUB, /*ADC, SBC,*/ AND, OR, EOR,
             /* COM, NEG,*/ INC, DEC, /*TST, CLR, SER,
             ANDI, ORI, CBR,*/
@@ -266,7 +264,7 @@ mcmc_instr(vector<instr_t> &program, const int oldcost,
         program[index].reg_r = num_opcodes % REGISTER_LIMIT;
     }
     int newcost = total_reg_error(testcase, program);
-    if(accept_mcmc_transition(oldcost, newcost)) {
+    if (accept_mcmc_transition(oldcost, newcost)) {
         return newcost;
     }
     program[index] = cached_instr;
@@ -274,7 +272,7 @@ mcmc_instr(vector<instr_t> &program, const int oldcost,
 }
 
 void
-mcmc(const vector<testpoint> &testcase, vector<instr_t> &program) {
+mcmc(vector<instr_t> &program) {
     const int opcodes [] = {ADD, SUB, MOV};
     const int num_opcodes = sizeof(opcodes) / sizeof(int);
     vector<instr_t> synprog(program);
@@ -283,8 +281,7 @@ mcmc(const vector<testpoint> &testcase, vector<instr_t> &program) {
 
     if(MODE == SYNTHESIS) {
         bestcost = 1e8;
-    }
-    else if(MODE == OPTIMIZATION) {
+    } else if(MODE == OPTIMIZATION) {
         bestcost = total_reg_error(testcase, synprog);
     }
 
@@ -295,37 +292,33 @@ mcmc(const vector<testpoint> &testcase, vector<instr_t> &program) {
                 instr.reg_d = rand() % REGISTER_LIMIT;
                 instr.reg_r = rand() % REGISTER_LIMIT;
             }
-        }
-        else if(MODE == OPTIMIZATION) {
+        } else if(MODE == OPTIMIZATION) {
             program = synprog;
         }
         int cost = total_reg_error(testcase, program);
         printf("cost before = %d\n", cost);
         // core loop
-        high_resolution_clock::time_point t1 = high_resolution_clock::now();
-        for(int moves = 0; moves < MOVES; ++moves) {
+        auto t1 = high_resolution_clock::now();
+        for (int moves = 0; moves < MOVES; ++moves) {
             const int randnum = rand() % 100;
             if(randnum < 25) {
-                cost = mcmc_opcode(program, cost, testcase);
-            }
-            else if(randnum < 50) {
-                cost = mcmc_operand(program, cost, testcase);
-            }
-            else if(randnum < 75) {
-                cost = mcmc_swap(program, cost, testcase);
-            }
-            else {
-                cost = mcmc_instr(program, cost, testcase);
+                cost = mcmc_opcode(program, cost);
+            } else if(randnum < 50) {
+                cost = mcmc_operand(program, cost);
+            } else if(randnum < 75) {
+                cost = mcmc_swap(program, cost);
+            } else {
+                cost = mcmc_instr(program, cost);
             }
         }
-        high_resolution_clock::time_point t2 = high_resolution_clock::now();
+        auto t2 = high_resolution_clock::now();
         const int duration = duration_cast<microseconds> (t2 - t1).count();
         const long long exec_instrs = (MOVES * 1LL * PROGRAM_LEN);
         const double i_per_second = 1e6 * ((double) exec_instrs / (double) duration);
         printf("\t\tduration = %d,instrs = %lld", duration, exec_instrs);
         printf("\t\tinstrs/second = %f\n", i_per_second);
         printf("\t\tcost after = %d\n", cost);
-        if(cost < bestcost) for(auto &instr: program) {
+        if (cost < bestcost) for(auto &instr: program) {
             print_instr(instr);
             bestcost = cost;
             bestprog = program;
@@ -333,158 +326,27 @@ mcmc(const vector<testpoint> &testcase, vector<instr_t> &program) {
     }
     program = bestprog;
 }
-
-
-int
-testcase_two(testcase_t testcase) {
-    vector<instr_t> program (1);
-    for(instr_t &instr: program) {
-      instr.opcode = LSL;
-      instr.reg_d = 0;
-    }
-    int error = total_reg_error(testcase, program);
-    printf("error = %d\n", error);
-    return 0;
 }
 
-int
-testcase_p1(testcase_t testcase) {
-    vector<instr_t> program (3);
-    /* MOV R0 to R1 */
-    /* DEC R1 */
-    /* AND R1, R0 */
-    program[0].opcode = MOV;
-    program[0].reg_d = 1;
-    program[0].reg_r = 0;
 
-    program[1].reg_d = 1;
-    program[1].opcode = DEC;
-
-    program[2].opcode = AND;
-    program[2].reg_r = 1;
-    program[2].reg_d = 0;
-
-    int error = total_reg_error(testcase, program);
-    printf("p1: error = %d\n", error);
-    return error;
-}
-
-int
-testcase_p2(testcase_t testcase) {
-    // is power of 2
-    vector<instr_t> program (3);
-    /* MOV R0 to R1 */
-    /* INC R1 */
-    /* AND R1, R0 */
-    program[0].opcode = MOV;
-    program[0].reg_d = 1;
-    program[0].reg_r = 0;
-
-    program[1].reg_d = 1;
-    program[1].opcode = INC;
-
-    program[2].opcode = AND;
-    program[2].reg_r = 1;
-    program[2].reg_d = 0;
-
-    int error = total_reg_error(testcase, program);
-    printf("p2: error = %d\n", error);
-    return error;
-}
-
-int
-testcase_p3(testcase_t testcase) {
-    vector<instr_t> program (2);
-    /* SUB R0 from R1 */
-    /* AND R1, R0 */
-    program[0].opcode = SUB;
-    program[0].reg_d = 1;
-    program[0].reg_r = 0;
-
-    program[1].opcode = AND;
-    program[1].reg_r = 1;
-    program[1].reg_d = 0;
-
-    int error = total_reg_error(testcase, program);
-    printf("p3: error = %d\n", error);
-    return error;
-}
-
-int
-testcase_p4(testcase_t testcase) {
-    // is power of 2
-    vector<instr_t> program (3);
-    /* MOV R0 to R1 */
-    /* DEC R1 */
-    /* AND R1, R0 */
-    program[0].opcode = MOV;
-    program[0].reg_d = 1;
-    program[0].reg_r = 0;
-
-    program[1].reg_d = 1;
-    program[1].opcode = DEC;
-
-    program[2].opcode = EOR;
-    program[2].reg_r = 1;
-    program[2].reg_d = 0;
-
-    int error = total_reg_error(testcase, program);
-    printf("p4: error = %d\n", error);
-    return error;
-}
-
-int
-testcase_p17(testcase_t testcase) {
-    vector<instr_t> program (5);
-    // o1 = x - 1
-    // o2 = o1 | x
-    // o3 = o2 + 1
-    // res = o3 & x
-    program[0].opcode = MOV;
-    program[0].reg_d = 1;
-    program[0].reg_r = 0;
-
-    program[1].opcode = DEC;
-    program[1].reg_d = 1;
-
-    program[2].opcode = OR;
-    program[2].reg_r = 0;
-    program[2].reg_d = 1;
-
-    program[3].opcode = INC;
-    program[3].reg_d = 1;
-
-    program[4].opcode = AND;
-    program[4].reg_r = 1;
-    program[4].reg_d = 0;
-    int error = total_reg_error(testcase, program);
-    printf("p17: error = %d\n", error);
-    return error;
-}
+using namespace stoke;
 
 int main(int argc, char* argv[]) {
     srand(time(NULL));
-    vector<testpoint> testcase;
     vector<instr_t> program(PROGRAM_LEN);
     printf("%s\n", argv[1]);
 
-    if(TWO_INPUTS) {
+    if (TWO_INPUTS) {
         read_2input_testcase(argv[1]);
-    }
-    else {
+    } else {
         read_testcase(argv[1], testcase);
-    }
-
-    if(false) {
-        testcase_p17(testcase);
-        return 0;
     }
 
     printf("entering SYSTHESIS phase ...\n");
     MODE = SYNTHESIS;
-    mcmc(testcase, program);
+    mcmc(program);
     printf("entering OPTIMIZATION phase ...\n");
     MODE = OPTIMIZATION;
     beta = 0.5;
-    mcmc(testcase, program);
+    mcmc(program);
 }
