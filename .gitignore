@@ -1,5 +1,7 @@
 *.swp
 *.DS_Store
+demo/*
+logs/*
 stoke/stoke
 testcase/testcase_gen
 hackers-delight/*
