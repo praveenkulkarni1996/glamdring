@@ -16,12 +16,13 @@
    * Add function calls. (figure this out)
 4. Create new benchmarks.
    * sin, tanh, log, x^y.
-7. Get machine in lab.
 8. Experiments to find good beta.
-9. Refactor code. 
+10. Lint code.
 
 
 DONE
 ====
 5. Make the file name a command line argument or in the makefile [done]
 6. Add some documentation.
+7. ~~~~ Get machine in lab. ~~~~~
+9. ~~~~ Refactor code. ~~~~ 

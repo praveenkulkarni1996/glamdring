@@ -71,7 +71,7 @@ read_2input_testcase(const char filename[]) {
 }
 
 
-inline void 
+inline void
 clear_state(state_t &state) {
     memset(state.reg, 0, sizeof(state.reg));
     return;
@@ -86,19 +86,19 @@ total_reg_error(const testcase_t &testcase,
     int error[REGISTER_LIMIT];
     memset(error, 0, sizeof(error));
 
-    if(TWO_INPUTS) {
-        for(auto &tp: glob_2testcase) {
+    if (TWO_INPUTS) {
+        for (auto &tp : glob_2testcase) {
             clear_state(state);
             state.reg[0] = tp.first.first;
             state.reg[1] = tp.first.second;
             run_program(state, program);
-            for(int i = 0; i < REGISTER_LIMIT; ++i) {
+            for (int i = 0; i < REGISTER_LIMIT; ++i) {
                 error[i] += popcount((uint8_t)(state.reg[i] ^ tp.second));
             }
         }
         int inefficency_cost = 0;
-        if(MODE == OPTIMIZATION) {
-            for(auto &instr: program) {
+        if (MODE == OPTIMIZATION) {
+            for (auto &instr : program) {
                 inefficency_cost += get_cost(instr);
             }
         }
@@ -107,17 +107,17 @@ total_reg_error(const testcase_t &testcase,
     }
 
 
-    for(auto &tp: testcase) {
+    for (auto &tp : testcase) {
         clear_state(state);
         state.reg[0] = tp.first;
         run_program(state, program);
-        for(int i = 0; i < REGISTER_LIMIT; ++i) {
+        for (int i = 0; i < REGISTER_LIMIT; ++i) {
             error[i] += popcount((uint8_t)(state.reg[i] ^ tp.second));
         }
     }
     int inefficency_cost = 0;
-    if(MODE == OPTIMIZATION) {
-        for(auto &instr: program) {
+    if (MODE == OPTIMIZATION) {
+        for (auto &instr : program) {
             inefficency_cost += get_cost(instr);
         }
     }
@@ -131,18 +131,18 @@ total_reg_error2(const testcase2_t &testcase,
     state_t state;
     int error[REGISTER_LIMIT];
     memset(error, 0, sizeof(error));
-    for(auto &tp: testcase) {
+    for (auto &tp : testcase) {
         clear_state(state);
         state.reg[0] = tp.first.first;
         state.reg[1] = tp.first.second;
         run_program(state, program);
-        for(int i = 0; i < REGISTER_LIMIT; ++i) {
+        for (int i = 0; i < REGISTER_LIMIT; ++i) {
             error[i] += popcount((uint8_t)(state.reg[i] ^ tp.second));
         }
     }
     int inefficency_cost = 0;
-    if(MODE == OPTIMIZATION) {
-        for(auto &instr: program) {
+    if (MODE == OPTIMIZATION) {
+        for (auto &instr : program) {
             inefficency_cost += get_cost(instr);
         }
     }
@@ -190,7 +190,7 @@ mcmc_opcode(vector<instr_t> &program, const int oldcost) {
     }
 
     const int newcost = total_reg_error(testcase, program);
-    if(accept_mcmc_transition(oldcost, newcost)) {
+    if (accept_mcmc_transition(oldcost, newcost)) {
         return newcost;
     }
     program[index] = cached_instr;
@@ -209,7 +209,7 @@ mcmc_operand(vector<instr_t> &program, const int oldcost) {
         case SBC: case AND: case OR: case EOR:
             // if random number is even then change src register
             // if random number is odd then change dest register
-            if(rand() & 1)
+            if (rand() & 1)
                 program[index].reg_r = rand() % REGISTER_LIMIT;
             else
                 program[index].reg_d = rand() % REGISTER_LIMIT;
@@ -224,7 +224,7 @@ mcmc_operand(vector<instr_t> &program, const int oldcost) {
             assert(false);
     }
     const int newcost = total_reg_error(testcase, program);
-    if(accept_mcmc_transition(oldcost, newcost)) {
+    if (accept_mcmc_transition(oldcost, newcost)) {
         return newcost;
     }
     program[index] = cached_instr;
@@ -238,7 +238,7 @@ mcmc_swap(vector<instr_t> &program, const int oldcost) {
     int index2 = rand() % program.size();
     swap(program[index1], program[index2]);
     const int newcost = total_reg_error(testcase, program);
-    if(accept_mcmc_transition(oldcost, newcost)) {
+    if (accept_mcmc_transition(oldcost, newcost)) {
         return newcost;
     }
     swap(program[index1], program[index2]);
@@ -247,7 +247,7 @@ mcmc_swap(vector<instr_t> &program, const int oldcost) {
 
 inline int
 mcmc_instr(vector<instr_t> &program, const int oldcost) {
-    const double p_unused = 0.3; // FIXME
+    const double p_unused = 0.3;  // TODO (pkulkarni) : tunable param
     const int index = rand() % program.size();
     const instr_t cached_instr = program[index];
     if (rand() % 100 <= 100 * p_unused) {
@@ -279,20 +279,20 @@ mcmc(vector<instr_t> &program) {
     vector<instr_t> bestprog(program);
     int bestcost;
 
-    if(MODE == SYNTHESIS) {
+    if (MODE == SYNTHESIS) {
         bestcost = 1e8;
-    } else if(MODE == OPTIMIZATION) {
+    } else if (MODE == OPTIMIZATION) {
         bestcost = total_reg_error(testcase, synprog);
     }
 
-    for(int restarts = 0; restarts < NUM_RESTARTS; ++restarts) {
-        if(MODE == SYNTHESIS) {
-            for(auto &instr: program) {
+    for (int restarts = 0; restarts < NUM_RESTARTS; ++restarts) {
+        if (MODE == SYNTHESIS) {
+            for (auto &instr : program) {
                 instr.opcode = opcodes[rand() % num_opcodes];
                 instr.reg_d = rand() % REGISTER_LIMIT;
                 instr.reg_r = rand() % REGISTER_LIMIT;
             }
-        } else if(MODE == OPTIMIZATION) {
+        } else if (MODE == OPTIMIZATION) {
             program = synprog;
         }
         int cost = total_reg_error(testcase, program);
@@ -301,11 +301,11 @@ mcmc(vector<instr_t> &program) {
         auto t1 = high_resolution_clock::now();
         for (int moves = 0; moves < MOVES; ++moves) {
             const int randnum = rand() % 100;
-            if(randnum < 25) {
+            if (randnum < 25) {
                 cost = mcmc_opcode(program, cost);
-            } else if(randnum < 50) {
+            } else if (randnum < 50) {
                 cost = mcmc_operand(program, cost);
-            } else if(randnum < 75) {
+            } else if (randnum < 75) {
                 cost = mcmc_swap(program, cost);
             } else {
                 cost = mcmc_instr(program, cost);
@@ -313,20 +313,22 @@ mcmc(vector<instr_t> &program) {
         }
         auto t2 = high_resolution_clock::now();
         const int duration = duration_cast<microseconds> (t2 - t1).count();
-        const long long exec_instrs = (MOVES * 1LL * PROGRAM_LEN);
-        const double i_per_second = 1e6 * ((double) exec_instrs / (double) duration);
+        const int64_t exec_instrs = (MOVES * 1LL * PROGRAM_LEN);
+        const double i_per_second = 1e6 * (static_cast<double>(exec_instrs) / static_cast<double>(duration));
         printf("\t\tduration = %d,instrs = %lld", duration, exec_instrs);
         printf("\t\tinstrs/second = %f\n", i_per_second);
         printf("\t\tcost after = %d\n", cost);
-        if (cost < bestcost) for(auto &instr: program) {
-            print_instr(instr);
-            bestcost = cost;
-            bestprog = program;
+        if (cost < bestcost) {
+            for (auto &instr : program) {
+                print_instr(instr);
+                bestcost = cost;
+                bestprog = program;
+            }
         }
     }
     program = bestprog;
 }
-}
+}  // namespace stoke
 
 
 using namespace stoke;
