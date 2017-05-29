@@ -1,3 +1,5 @@
+// Copyright 2016 Praveen Kulkarni
+
 #include <iostream>
 #include <fstream>
 #include <cstdlib>
@@ -10,9 +12,34 @@
 #define SYNTHESIS false
 #define OPTIMIZATION true
 
+//  configuration
+//  REGISTER_LIMIT : number of registers to use
+//  NUM_RESTARTS : number of restarts to use
+//  PROGRAM_LEN : length of program
+//  SCALE : multiplying factor for instruction cost
+//  MOVES : number of moves before restarting
+#ifndef REGISTER_LIMIT
+    #define REGISTER_LIMIT 4
+#endif
+
+#ifndef NUM_RESTARTS
+    #define NUM_RESTARTS 10
+#endif
+
+#ifndef PROGRAM_LEN
+    #define PROGRAM_LEN 15
+#endif
+
+#ifndef SCALE
+    #define SCALE 1
+#endif
+
+#ifndef MOVES
+    #define MOVES 5000
+#endif
+
 namespace stoke {
 using namespace std::chrono;
-
 
 typedef pair<int8_t, int8_t> testpoint;
 typedef vector<testpoint> testcase_t;
@@ -25,11 +52,8 @@ typedef vector<testpt2_t> testcase2_t;
 
 double beta = 1.0;
 
-const int REGISTER_LIMIT = 4;
-const int NUM_RESTARTS = 50;
-const int PROGRAM_LEN = 15;
-const int SCALE = 1;
-const int MOVES = 5000; //800000000;
+
+
 bool MODE = SYNTHESIS;
 
 #define TWO_INPUTS false
@@ -102,7 +126,7 @@ total_reg_error(const testcase_t &testcase,
                 inefficency_cost += get_cost(instr);
             }
         }
-        return *min_element(error, error + REGISTER_LIMIT) 
+        return *min_element(error, error + REGISTER_LIMIT)
             + SCALE * inefficency_cost;
     }
 
@@ -121,7 +145,7 @@ total_reg_error(const testcase_t &testcase,
             inefficency_cost += get_cost(instr);
         }
     }
-    return *min_element(error, error + REGISTER_LIMIT) 
+    return *min_element(error, error + REGISTER_LIMIT)
         + SCALE * inefficency_cost;
 }
 
@@ -160,8 +184,7 @@ inline int
 mcmc_opcode(vector<instr_t> &program, const int oldcost) {
     const int index = rand() % program.size();
     const instr_t cached_instr = program[index];
-    //
-    switch(cached_instr.opcode) {
+    switch (cached_instr.opcode) {
         case UNUSED:
             break;
         case MOV: case ADD: case SUB: case ADC:
@@ -247,14 +270,14 @@ mcmc_swap(vector<instr_t> &program, const int oldcost) {
 
 inline int
 mcmc_instr(vector<instr_t> &program, const int oldcost) {
-    const double p_unused = 0.3;  // TODO (pkulkarni) : tunable param
+    const double p_unused = 0.3;  // FIXME
     const int index = rand() % program.size();
     const instr_t cached_instr = program[index];
     if (rand() % 100 <= 100 * p_unused) {
         program[index].opcode = UNUSED;
     } else {
         int opcodes[] = {MOV, ADD, SUB, /*ADC, SBC,*/ AND, OR, EOR,
-            /* COM, NEG,*/ INC, DEC, /*TST, CLR, SER,
+            /* COM, NEG,*/ INC, DEC, /*TST, CLR, SER,\
             ANDI, ORI, CBR,*/
             /*LSL, LSR, ASR, ROL, ROR, SWAP*/
         };
@@ -312,7 +335,7 @@ mcmc(vector<instr_t> &program) {
             }
         }
         auto t2 = high_resolution_clock::now();
-        const int duration = duration_cast<microseconds> (t2 - t1).count();
+        const int duration = duration_cast<microseconds>(t2 - t1).count();
         const int64_t exec_instrs = (MOVES * 1LL * PROGRAM_LEN);
         const double i_per_second = 1e6 * (static_cast<double>(exec_instrs) / static_cast<double>(duration));
         printf("\t\tduration = %d,instrs = %lld", duration, exec_instrs);

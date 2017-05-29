@@ -1,5 +1,5 @@
 all:
-	g++ -O3 -march=native -std=c++14 stoke.cpp -o stoke
+	g++ -O3 -D REGISTER_LIMIT=2 -D NUM_RESTARTS=50 -march=native -std=c++14 stoke.cpp -o stoke
 
 run: all
 	./stoke ../testcase/exp_testcase.txt
