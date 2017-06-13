@@ -1,3 +1,4 @@
+*.pyc
 *.swp
 *.DS_Store
 demo/*
@@ -5,3 +6,11 @@ logs/*
 stoke/stoke
 testcase/testcase_gen
 hackers-delight/*
+
+
+# in /parsing
+# .asm and .pk files will come and go, so we don't use them
+# .asm is temporary assembly files which will be run on the emulator
+# .pk is files in L*
+parsing/*.asm
+parsing/*.pk
