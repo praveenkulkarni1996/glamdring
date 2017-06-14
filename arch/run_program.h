@@ -3,7 +3,7 @@
 #include "data_transfer.h"
 #include "bit_instr.h"
 #include <vector>
-using namespace std;
+// using namespace std;
 
 float to_fixed_point(int8_t num) {
     float prod = 8;
@@ -30,6 +30,9 @@ void run_program(state_t &state, const std::vector<instr_t> &program) {
     }
 }
 
+
+// Depreciated in favour of the .asm format
+// find examples of this in parser/
 void parser(const char filename[], vector<instr_t> &program) {
     FILE *fin;
     fin = fopen(filename, "r");
@@ -67,10 +70,37 @@ void parser(const char filename[], vector<instr_t> &program) {
             program.back().reg_d = a;
             program.back().reg_r = b;
         }
-
     }
     fclose(fin);
 }
+
+// this runs the code from a .asm file
+// that is generated after compiling a .pk file
+// by the parser
+void read_program_from_asm(char* filename, vector<instr_t> &program) {
+    FILE *fin;
+    char opcode[8];
+    int rr, rd;
+    fin = fopen(filename, "r");
+    while(fscanf(fin, "%s rd:%d rr:%d\n", opcode, &rd, &rr) != EOF) {
+        printf("%s, %d, %d\n", opcode, rd, rr); // for DEBUG
+        instr_t instr;
+        instr.reg_d = rd;
+        instr.reg_r = rr;
+        if(strcmp(opcode, "ADD") == 0) {
+            instr.opcode = ADD;
+        } else if(strcmp(opcode, "SUB") == 0) {
+            instr.opcode = SUB;
+        } else if(strcmp(opcode, "MOV") == 0) {
+            instr.opcode = MOV;
+        } else {
+            assert(false);
+        }
+        program.push_back(instr);
+    }
+    fclose(fin);
+}
+
 //
 //
 // int main() {
