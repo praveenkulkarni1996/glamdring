@@ -93,6 +93,8 @@ void read_program_from_asm(char* filename, vector<instr_t> &program) {
             instr.opcode = SUB;
         } else if(strcmp(opcode, "MOV") == 0) {
             instr.opcode = MOV;
+        } else if(strcmp(opcode, "ADC") == 0) {
+            instr.opcode = ADC;
         } else {
             assert(false);
         }

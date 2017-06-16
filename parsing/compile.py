@@ -24,7 +24,7 @@ def print_program(assembly_code, asm_outputfile):
             print(assembly_instr, file=asm_out)
 
 
-def build_mapping(config):
+def build_8bit_mapping(config):
 
     # depending upon the architechture more temp variables will be needed
     # 8 bit needs 1 temp variable
@@ -45,10 +45,11 @@ def build_mapping(config):
     return mapping
 
 
-def compile_8bit(programline, mapping):
+def compile_line_8(programline, mapping):
     assembly = []
     temp_register = mapping['__temp__']
     operation_to_opcode = {'+': 'ADD', '-': 'SUB'}
+    # c = a <op> b
     # first move the temp register
     assembly.append(Instruction(opcode='MOV',
                                 rd=temp_register,
@@ -64,43 +65,84 @@ def compile_8bit(programline, mapping):
     return assembly
 
 
-def compile16_bit(programline, mapping):
-    # assembly = []
-    # temp0, temp1 = mapping['__temp0__'], mapping['__temp1__']
-    pass
-
-
-def compile(program, mapping, arch):
+def compile_prog_8(program, config):
+    assert config['arch'] == 8
     assembly_code = []
-    if arch == 8:
-        for line in program:
-            programline = ProgramLine(line)
-            programline.parse()
-            assembly_code += compile_8bit(programline, mapping)
+    mapping = build_8bit_mapping(config)
+    for line in program:
+        programline = ProgramLine(line)
+        programline.parse()
+        assembly_code += compile_line_8(programline, mapping)
+    return assembly_code
+
+
+def build_16bit_mapping(config):
+    input_vars = set(config['input'])
+    output_vars = set(config['output'])
+    temp_vars = set({'__temp__'})
+
+    variables = list(input_vars | output_vars | temp_vars)
+
+    mapping = {'low': {}, 'high': {}}
+    for index, var in enumerate(variables):
+        mapping['low'][var] = index
+        mapping['high'][var] = index + len(variables)
+
+    return mapping
+
+
+def compile_line_16(programline, mapping):
+    # assembly = []
+    # vars
+    low, high = mapping['low'], mapping['high']
+    temp_low, temp_high = low['__temp__'], high['__temp__']
+
+    if programline.op == '+':
+        # move the low bits into the assembly register
+        return [
+            Instruction(opcode='MOV', rd=temp_low, rr=low[programline.a]),
+            Instruction(opcode='ADD', rd=temp_low, rr=low[programline.b]),
+            Instruction(opcode='MOV', rd=low[programline.c], rr=temp_low),
+            # carry is currently in the CARRY flag,
+            # MOV does not affect the flags
+            Instruction(opcode='MOV', rd=temp_high, rr=high[programline.a]),
+            Instruction(opcode='ADC', rd=temp_high, rr=high[programline.b]),
+            Instruction(opcode='MOV', rd=high[programline.c], rr=temp_high)
+        ]
     else:
-        # 16 bits and above
-        raise NotImplemented
+        raise NotImplementedError
+    return [None]
+
+
+def compile_prog_16(program, config):
+    assert config['arch'] == 16
+    mapping = build_16bit_mapping(config)
+    assembly_code = []
+    for line in program:
+        programline = ProgramLine(line)
+        programline.parse()
+        assembly_code += compile_line_16(programline, mapping)
+    pprint.pprint(mapping)
+    pprint.pprint(assembly_code)
     return assembly_code
 
 
 def main():
     config = reading_config_file('config.json')
     program = reading_program_file('adding.pk')
-    mapping = build_mapping(config)
 
     # read architecture from the configfile
-    arch = config['arch']
-    print(arch)
 
     # compile the code
-    assembly_code = compile(program, mapping, arch)
-
+    if config['arch'] == 8:
+        assembly_code = compile_prog_8(program, config)
+        # TODO: move this line outside if
+    elif config['arch'] == 16:
+        assembly_code = compile_prog_16(program, config)
+    else:
+        raise NotImplementedError
     print_program(assembly_code, 'adding.asm')
-'''
-    with open('adding.asm', 'w') as out_asm:
-        for assembly_instr in assembly_code:
-            print(assembly_instr, file=out_asm)
-'''
+
 
 if __name__ == '__main__':
     main()
