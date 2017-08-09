@@ -27,7 +27,7 @@
 #endif
 
 #ifndef PROGRAM_LEN
-    #define PROGRAM_LEN 15
+    #define PROGRAM_LEN 8
 #endif
 
 #ifndef SCALE
@@ -35,7 +35,7 @@
 #endif
 
 #ifndef MOVES
-    #define MOVES 5000
+    #define MOVES 500000
 #endif
 
 namespace stoke {
@@ -103,6 +103,11 @@ clear_state(state_t &state) {
     memset(state.flags, 0, sizeof(state.flags));
 }
 
+inline void load_state(state_t &state) {
+  state.reg[3] = 1;
+  state.reg[2] = 3;
+}
+
 inline int
 total_reg_error(const testcase_t &testcase,
                 const vector<instr_t> &program) {
@@ -110,9 +115,11 @@ total_reg_error(const testcase_t &testcase,
     int error[REGISTER_LIMIT];
     memset(error, 0, sizeof(error));
 
+
     if (TWO_INPUTS) {
         for (auto &tp : glob_2testcase) {
             clear_state(state);
+            load_state(state);
             state.reg[0] = tp.first.first;
             state.reg[1] = tp.first.second;
             run_program(state, program);
@@ -132,7 +139,9 @@ total_reg_error(const testcase_t &testcase,
 
 
     for (auto &tp : testcase) {
+      // cout << "tp: " << (int)tp.first << " " << (int)tp.second << "\n";
         clear_state(state);
+        load_state(state);
         state.reg[0] = tp.first;
         run_program(state, program);
         for (int i = 0; i < REGISTER_LIMIT; ++i) {
@@ -189,9 +198,10 @@ mcmc_opcode(vector<instr_t> &program, const int oldcost) {
             break;
         case MOV: case ADD: case SUB: case ADC:
         case SBC: case AND: case OR: case EOR:
+        case MULS:
             {
                 const int opcodes[] =
-                    { MOV, ADD, SUB, /*ADC, SBC,*/ /*AND, OR, EOR*/};
+                    { MOV, ADD, /*SUB,*/ MULS/*ADC, SBC,*/ /*AND, OR, EOR*/};
                 const int num_opcodes = sizeof(opcodes) / sizeof(int);
                 program[index].opcode = opcodes[rand() % num_opcodes];
                 break;
@@ -230,6 +240,7 @@ mcmc_operand(vector<instr_t> &program, const int oldcost) {
             break;
         case MOV: case ADD: case SUB: case ADC:
         case SBC: case AND: case OR: case EOR:
+        case MULS: // FIXME
             // if random number is even then change src register
             // if random number is odd then change dest register
             if (rand() & 1)
@@ -276,8 +287,8 @@ mcmc_instr(vector<instr_t> &program, const int oldcost) {
     if (rand() % 100 <= 100 * p_unused) {
         program[index].opcode = UNUSED;
     } else {
-        int opcodes[] = {MOV, ADD, SUB, /*ADC, SBC,*/ AND, OR, EOR,
-            /* COM, NEG,*/ INC, DEC, /*TST, CLR, SER,\
+        int opcodes[] = {MOV, ADD, /*SUB,*/ MULS/*ADC, SBC,*//* AND, OR, EOR,*/
+            /* COM, NEG,*/ /*INC, DEC, *//*TST, CLR, SER,\
             ANDI, ORI, CBR,*/
             /*LSL, LSR, ASR, ROL, ROR, SWAP*/
         };
@@ -296,7 +307,7 @@ mcmc_instr(vector<instr_t> &program, const int oldcost) {
 
 void
 mcmc(vector<instr_t> &program) {
-    const int opcodes [] = {ADD, SUB, MOV};
+    const int opcodes [] = {ADD, /*SUB,*/ MOV, MULS};
     const int num_opcodes = sizeof(opcodes) / sizeof(int);
     vector<instr_t> synprog(program);
     vector<instr_t> bestprog(program);
@@ -353,8 +364,18 @@ mcmc(vector<instr_t> &program) {
 }
 }  // namespace stoke
 
-
 using namespace stoke;
+
+void test() {
+  instr_t one, two;
+  one.opcode = ADD; one.reg_r = 3; one.reg_d = 0;
+  two.opcode = MULS; two.reg_r = 0; two.reg_d = 0;
+  vector<instr_t> prog;
+  prog.push_back(one);
+  prog.push_back(two);
+  int error = total_reg_error(testcase, prog);
+  cout << "error " << error << "\n";
+}
 
 int main(int argc, char* argv[]) {
     srand(time(NULL));
@@ -366,6 +387,7 @@ int main(int argc, char* argv[]) {
     } else {
         read_testcase(argv[1], testcase);
     }
+//     test();
 
     printf("entering SYSTHESIS phase ...\n");
     MODE = SYNTHESIS;
