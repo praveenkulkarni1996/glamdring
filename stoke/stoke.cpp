@@ -1,5 +1,6 @@
 // Copyright 2016 Praveen Kulkarni
 
+#include <algorithm>
 #include <iostream>
 #include <fstream>
 #include <cstdlib>
